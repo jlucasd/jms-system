@@ -24,6 +24,33 @@ export type DashboardUser = {
   imageUrl: string | null;
 };
 
+export type RentalStatus = 'Pendente' | 'Confirmado' | 'Concluído';
+export type RentalType = '30 Min' | '1 Hora' | 'Tour' | 'Diária';
+
+export interface Rental {
+    id: number;
+    clientName: string;
+    clientDoc: string;
+    clientInitial: string;
+    clientPhone: string;
+    date: string;
+    rentalType: RentalType;
+    startTime: string;
+    endTime: string;
+    status: RentalStatus;
+    location: string;
+    observations?: string;
+    paymentMethod?: 'Pix' | 'Cartão' | 'Dinheiro';
+}
+
+const initialRentals: Rental[] = [
+    { id: 1, clientName: 'Roberto Souza', clientDoc: '***.456.789-**', clientInitial: 'RS', clientPhone: '(11) 98765-4321', date: '2023-11-15', rentalType: '1 Hora', startTime: '09:00', endTime: '10:00', status: 'Pendente', location: 'Doca Principal - Marina Azul' },
+    { id: 2, clientName: 'Ana Lima', clientDoc: '***.234.567-**', clientInitial: 'AL', clientPhone: '(21) 99887-6655', date: '2023-11-15', rentalType: '1 Hora', startTime: '10:30', endTime: '11:00', status: 'Confirmado', location: 'Doca Principal - Marina Azul' },
+    { id: 3, clientName: 'Marcos Ferreira', clientDoc: '***.123.456-**', clientInitial: 'MF', clientPhone: '(47) 99111-2222', date: '2023-11-16', rentalType: '1 Hora', startTime: '14:00', endTime: '16:00', status: 'Concluído', location: 'Doca Principal - Marina Azul' },
+    { id: 4, clientName: 'Julia Pereira', clientDoc: '***.987.654-**', clientInitial: 'JP', clientPhone: '(48) 98888-7777', date: '2023-11-17', rentalType: 'Diária', startTime: '08:00', endTime: '18:00', status: 'Pendente', location: 'Doca Principal - Marina Azul' },
+    { id: 5, clientName: 'Thiago Costa', clientDoc: '***.345.678-**', clientInitial: 'TC', clientPhone: '(11) 97777-1111', date: '2023-11-18', rentalType: '1 Hora', startTime: '15:00', endTime: '16:00', status: 'Confirmado', location: 'Doca Principal - Marina Azul' },
+];
+
 const initialDashboardUsers: DashboardUser[] = [
   {
     id: '#001',
@@ -59,6 +86,7 @@ const App: React.FC = () => {
     { email: 'jmsjetski@gmail.com', password: '123', fullName: 'Carlos Silva' }
   ]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUser[]>(initialDashboardUsers);
+  const [rentals, setRentals] = useState<Rental[]>(initialRentals);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [dashboardPage, setDashboardPage] = useState<DashboardPage>('dashboard');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -116,6 +144,16 @@ const App: React.FC = () => {
     setDashboardUsers(prev => prev.filter(user => user.id !== userId));
   };
 
+  const handleAddNewRental = (newRental: Rental) => {
+    setRentals(prev => [newRental, ...prev]);
+    setSuccessMessage('Locação salva com sucesso!');
+  }
+
+  const handleUpdateRental = (updatedRental: Rental) => {
+    setRentals(prev => prev.map(r => r.id === updatedRental.id ? updatedRental : r));
+    setSuccessMessage('Locação salva com sucesso!');
+  }
+
   const handleDashboardNavigation = (page: DashboardPage) => {
     setDashboardPage(page);
   }
@@ -124,11 +162,14 @@ const App: React.FC = () => {
     return <DashboardScreen 
       currentUser={currentUser} 
       users={dashboardUsers}
+      rentals={rentals}
       activePage={dashboardPage}
       onNavigate={handleDashboardNavigation}
       onAddNewUser={handleAddNewDashboardUser}
       onUpdateUser={handleUpdateDashboardUser}
       onDeleteUser={handleDeleteDashboardUser}
+      onAddNewRental={handleAddNewRental}
+      onUpdateRental={handleUpdateRental}
       successMessage={successMessage}
       setSuccessMessage={setSuccessMessage}
     />;

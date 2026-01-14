@@ -24,13 +24,14 @@ interface DashboardScreenProps {
     onDeleteUser: (userId: string) => void;
     onAddNewRental: (rental: Rental) => void;
     onUpdateRental: (rental: Rental) => void;
+    onDeleteRental: (rentalId: number) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
     currentUser, users, rentals, activePage, onNavigate, onAddNewUser, onUpdateUser, onDeleteUser, 
-    onAddNewRental, onUpdateRental, successMessage, setSuccessMessage 
+    onAddNewRental, onUpdateRental, onDeleteRental, successMessage, setSuccessMessage 
 }) => {
     const [userPageView, setUserPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [userToEdit, setUserToEdit] = useState<DashboardUser | null>(null);
@@ -120,7 +121,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 return <AddUserScreen onCancel={handleCancelUserForm} onSave={userPageView === 'add' ? handleSaveNewUser : handleUpdateUser} userToEdit={userToEdit} />;
             case 'rentals':
                 if (rentalPageView === 'list') {
-                    return <RentalsScreen rentals={rentals} onNavigateToAddRental={handleNavigateToAddRental} onNavigateToEditRental={handleNavigateToEditRental} successMessage={successMessage} setSuccessMessage={setSuccessMessage} />;
+                    return <RentalsScreen rentals={rentals} onNavigateToAddRental={handleNavigateToAddRental} onNavigateToEditRental={handleNavigateToEditRental} onDeleteRental={onDeleteRental} successMessage={successMessage} setSuccessMessage={setSuccessMessage} />;
                 }
                 return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
             default:

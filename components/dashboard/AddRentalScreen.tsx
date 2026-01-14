@@ -8,7 +8,7 @@ interface AddRentalScreenProps {
     rentalToEdit: Rental | null;
 }
 
-const rentalTypes: RentalType[] = ['30 Min', '1 Hora', 'Tour', 'Diária'];
+const rentalTypes: RentalType[] = ['Meia Diária', 'Diária'];
 const paymentMethods: ('Pix' | 'Cartão' | 'Dinheiro')[] = ['Pix', 'Cartão', 'Dinheiro'];
 const statuses: RentalStatus[] = ['Pendente', 'Confirmado', 'Concluído'];
 
@@ -17,8 +17,8 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
 
     const [clientName, setClientName] = useState('');
     const [clientPhone, setClientPhone] = useState('');
-    const [clientDoc, setClientDoc] = useState('');
-    const [selectedRentalType, setSelectedRentalType] = useState<RentalType>('1 Hora');
+    const [clientCpf, setClientCpf] = useState('');
+    const [selectedRentalType, setSelectedRentalType] = useState<RentalType>('Meia Diária');
     const [date, setDate] = useState('');
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
@@ -31,7 +31,7 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
         if (isEditMode && rentalToEdit) {
             setClientName(rentalToEdit.clientName);
             setClientPhone(rentalToEdit.clientPhone);
-            setClientDoc(rentalToEdit.clientDoc);
+            setClientCpf(rentalToEdit.clientCpf);
             setSelectedRentalType(rentalToEdit.rentalType);
             setDate(rentalToEdit.date);
             setStartTime(rentalToEdit.startTime);
@@ -49,7 +49,7 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             id: isEditMode && rentalToEdit ? rentalToEdit.id : Date.now(),
             clientName,
             clientPhone,
-            clientDoc,
+            clientCpf,
             clientInitial: clientName.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase(),
             rentalType: selectedRentalType,
             date,
@@ -61,6 +61,23 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             status: selectedStatus,
         };
         onSave(rentalData);
+    };
+
+    const maskPhone = (value: string) => {
+        return value
+            .replace(/\D/g, '')
+            .replace(/(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{5})(\d)/, '$1-$2')
+            .replace(/(-\d{4})\d+?$/, '$1');
+    };
+
+    const maskCPF = (value: string) => {
+        return value
+            .replace(/\D/g, '')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+            .replace(/(-\d{2})\d+?$/, '$1');
     };
 
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
@@ -103,12 +120,12 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                             <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="clientPhone">Telefone / WhatsApp</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">smartphone</span>
-                                                <input value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" id="clientPhone" placeholder="(00) 00000-0000" type="tel"/>
+                                                <input value={clientPhone} onChange={e => setClientPhone(maskPhone(e.target.value))} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" id="clientPhone" placeholder="(00) 00000-0000" type="tel"/>
                                             </div>
                                         </div>
                                         <div className="col-span-2 md:col-span-1">
-                                            <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="clientDoc">Documento (RG/CPF)</label>
-                                            <input value={clientDoc} onChange={e => setClientDoc(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" id="clientDoc" placeholder="Apenas números" type="text"/>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="clientCpf">CPF</label>
+                                            <input value={clientCpf} onChange={e => setClientCpf(maskCPF(e.target.value))} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" id="clientCpf" placeholder="000.000.000-00" type="text"/>
                                         </div>
                                     </div>
                                 </div>
@@ -122,10 +139,10 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                     <div className="space-y-6">
                                         <div>
                                             <label className="block text-sm font-bold text-gray-700 mb-3">Tipo de Locação</label>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                            <div className="grid grid-cols-2 gap-4">
                                                 {rentalTypes.map(type => (
                                                     <button type="button" key={type} onClick={() => setSelectedRentalType(type)} className={`border p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all ${selectedRentalType === type ? 'border-2 border-secondary bg-secondary/5 shadow-sm' : 'border-gray-200 hover:border-secondary bg-white hover:shadow-md group'}`}>
-                                                        <span className={`material-symbols-outlined ${selectedRentalType === type ? 'text-secondary' : 'text-gray-400 group-hover:text-secondary'}`}>{type === 'Diária' ? 'event_available' : 'schedule'}</span>
+                                                        <span className={`material-symbols-outlined ${selectedRentalType === type ? 'text-secondary' : 'text-gray-400 group-hover:text-secondary'}`}>{type === 'Diária' ? 'calendar_month' : 'schedule'}</span>
                                                         <span className={`text-sm font-bold ${selectedRentalType === type ? 'text-primary' : 'text-gray-600 group-hover:text-primary'}`}>{type}</span>
                                                     </button>
                                                 ))}

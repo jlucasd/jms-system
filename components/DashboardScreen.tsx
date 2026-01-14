@@ -12,6 +12,8 @@ import AddUserScreen from './dashboard/AddUserScreen';
 import RentalsScreen from './dashboard/RentalsScreen';
 import AddRentalScreen from './dashboard/AddRentalScreen';
 import FinancialScreen from './dashboard/FinancialScreen';
+import AddCostScreen from './dashboard/AddCostScreen';
+import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
 import UserMenu from './dashboard/UserMenu';
 import { User, DashboardPage, DashboardUser, Rental, Cost } from '../App';
 
@@ -45,6 +47,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [userToEdit, setUserToEdit] = useState<DashboardUser | null>(null);
     const [rentalPageView, setRentalPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [rentalToEdit, setRentalToEdit] = useState<Rental | null>(null);
+    const [financialPageView, setFinancialPageView] = useState<'list' | 'add' | 'edit'>('list');
+    const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const dashboardContentRef = useRef<HTMLDivElement>(null);
 
@@ -158,10 +162,36 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setRentalToEdit(null);
     }
 
+    const handleNavigateToAddCost = () => {
+        setCostToEdit(null);
+        setFinancialPageView('add');
+    };
+    
+    const handleNavigateToEditCost = (cost: Cost) => {
+        setCostToEdit(cost);
+        setFinancialPageView('edit');
+    };
+
+    const handleCancelCostForm = () => {
+        setFinancialPageView('list');
+        setCostToEdit(null);
+    };
+
+    const handleSaveCost = (cost: Cost) => {
+        if (costToEdit) {
+            onUpdateCost(cost);
+        } else {
+            onAddNewCost(cost);
+        }
+        setFinancialPageView('list');
+        setCostToEdit(null);
+    };
+
     const resetViews = (page: DashboardPage) => {
         onNavigate(page);
         setUserPageView('list');
         setRentalPageView('list');
+        setFinancialPageView('list');
     }
 
     const renderContent = () => {
@@ -197,6 +227,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         </div>
                     </div>
                 );
+            case 'financialDashboard':
+                return <FinancialDashboardScreen costs={costs} />;
             case 'users':
                 if (userPageView === 'list') {
                     return <UsersScreen users={users} onNavigateToAddUser={handleNavigateToAddUser} onNavigateToEditUser={handleNavigateToEditUser} onDeleteUser={onDeleteUser} successMessage={successMessage} setSuccessMessage={setSuccessMessage} />;
@@ -208,14 +240,17 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 }
                 return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
             case 'financial':
-                return <FinancialScreen 
-                    costs={costs} 
-                    onAddNewCost={onAddNewCost}
-                    onUpdateCost={onUpdateCost}
-                    onDeleteCost={onDeleteCost}
-                    successMessage={successMessage}
-                    setSuccessMessage={setSuccessMessage}
-                />;
+                 if (financialPageView === 'list') {
+                    return <FinancialScreen 
+                        costs={costs} 
+                        onNavigateToAddCost={handleNavigateToAddCost}
+                        onNavigateToEditCost={handleNavigateToEditCost}
+                        onDeleteCost={onDeleteCost}
+                        successMessage={successMessage}
+                        setSuccessMessage={setSuccessMessage}
+                    />;
+                }
+                return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
             default:
                 return null;
         }

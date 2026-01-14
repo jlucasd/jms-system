@@ -2,27 +2,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Cost } from '../../App';
 import ConfirmationModal from './ConfirmationModal';
-import AddCostModal from './AddCostModal';
 
 interface FinancialScreenProps {
     costs: Cost[];
-    onAddNewCost: (cost: Cost) => void;
-    onUpdateCost: (cost: Cost) => void;
+    onNavigateToAddCost: () => void;
+    onNavigateToEditCost: (cost: Cost) => void;
     onDeleteCost: (costId: number) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
 }
 
 
-const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, onUpdateCost, onDeleteCost, successMessage, setSuccessMessage }) => {
+const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAddCost, onNavigateToEditCost, onDeleteCost, successMessage, setSuccessMessage }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPeriod, setSelectedPeriod] = useState('Todos os Períodos');
     const [selectedStatus, setSelectedStatus] = useState('Status: Todos');
-    
-    const [isAddCostModalOpen, setIsAddCostModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
     const [costToDelete, setCostToDelete] = useState<Cost | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
      useEffect(() => {
         if (successMessage) {
@@ -32,6 +30,10 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
             return () => clearTimeout(timer);
         }
     }, [successMessage, setSuccessMessage]);
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedPeriod, selectedStatus]);
 
     const filteredCosts = useMemo(() => {
         const now = new Date();
@@ -39,18 +41,19 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
         const currentYear = now.getFullYear();
 
         return costs.filter(cost => {
-            const costDate = new Date(cost.date);
-            
-            // Period filter
             let periodMatch = true;
-            if (selectedPeriod === 'Este Mês') {
-                periodMatch = costDate.getMonth() === currentMonth && costDate.getFullYear() === currentYear;
-            } else if (selectedPeriod === 'Mês Passado') {
-                const lastMonth = new Date(currentYear, currentMonth - 1, 1);
-                periodMatch = costDate.getMonth() === lastMonth.getMonth() && costDate.getFullYear() === lastMonth.getFullYear();
+            if (cost.date) { 
+                const costDate = new Date(cost.date);
+                if (selectedPeriod === 'Este Mês') {
+                    periodMatch = costDate.getMonth() === currentMonth && costDate.getFullYear() === currentYear;
+                } else if (selectedPeriod === 'Mês Passado') {
+                    const lastMonth = new Date(currentYear, currentMonth - 1, 1);
+                    periodMatch = costDate.getMonth() === lastMonth.getMonth() && costDate.getFullYear() === lastMonth.getFullYear();
+                }
+            } else {
+                periodMatch = selectedPeriod === 'Todos os Períodos';
             }
 
-            // Status filter
             let statusMatch = true;
             if (selectedStatus === 'Pago') {
                 statusMatch = cost.isPaid;
@@ -58,7 +61,6 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
                 statusMatch = !cost.isPaid;
             }
 
-            // Search term filter
             const searchMatch = searchTerm === '' || 
                                 cost.type.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                 cost.investor.toLowerCase().includes(searchTerm.toLowerCase());
@@ -66,6 +68,20 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
             return periodMatch && statusMatch && searchMatch;
         });
     }, [costs, searchTerm, selectedPeriod, selectedStatus]);
+
+    const totalPages = Math.ceil(filteredCosts.length / itemsPerPage);
+    const paginatedCosts = useMemo(() => {
+        return filteredCosts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    }, [filteredCosts, currentPage, itemsPerPage]);
+    
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredCosts.length);
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     const summaryData = useMemo(() => {
         const total = filteredCosts.reduce((acc, cost) => acc + cost.value, 0);
@@ -75,26 +91,6 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
     }, [filteredCosts]);
 
     const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    
-    const handleOpenAddModal = () => {
-        setCostToEdit(null);
-        setIsAddCostModalOpen(true);
-    };
-    
-    const handleOpenEditModal = (cost: Cost) => {
-        setCostToEdit(cost);
-        setIsAddCostModalOpen(true);
-    };
-
-    const handleSaveCost = (cost: Cost) => {
-        if(costToEdit) {
-            onUpdateCost(cost);
-        } else {
-            onAddNewCost(cost);
-        }
-        setIsAddCostModalOpen(false);
-        setCostToEdit(null);
-    };
     
     const handleDeleteClick = (cost: Cost) => {
         setCostToDelete(cost);
@@ -112,8 +108,11 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuBGA5h3rDjnuG9JSQ1G7Ne5TGrU8UKvOyYRo5_K-TXLaaDQu61aEeSfXrPLtnTwI2D1BEs8NG-ImZcCGDQzHZ3spjgUp6qtElmY-hR3h6iGwANWLwvdsNp3QZiyehR9qIIjbNtuETQrwlxaL-XgtHynYOgcx3S1oS3h0NZSjg-EXtsjJUDEhb1kDaRwXk9_1R0fNHjovDewRDPLP2B5vkNp_xLsimz4f7kunXKqY6S5hVFaI7pAT5LWqFWdbJ77R-jK-6z1Dp3Yjw";
 
     const investorColors: { [key: string]: string } = {
-        'Grupo': 'bg-blue-50 text-blue-700',
-        'Mayck': 'bg-teal-50 text-teal-700'
+        'Grupo': 'bg-gray-100 text-gray-700',
+        'João': 'bg-blue-50 text-blue-700',
+        'Mayck': 'bg-green-50 text-green-700',
+        'Ramon': 'bg-teal-50 text-teal-700',
+        'Stivison': 'bg-indigo-50 text-indigo-700'
     };
     
     return (
@@ -193,7 +192,7 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
                                 <option>Pendente</option>
                             </select>
                         </div>
-                        <button onClick={handleOpenAddModal} className="w-full lg:w-auto px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                        <button onClick={onNavigateToAddCost} className="w-full lg:w-auto px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                             <span className="material-symbols-outlined">add</span>
                             Novo Custo
                         </button>
@@ -212,7 +211,7 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filteredCosts.map((cost) => (
+                                {paginatedCosts.map((cost) => (
                                     <tr key={cost.id} className="hover:bg-gray-50/50 transition-colors group">
                                         <td className="p-4 text-sm font-bold text-primary">{cost.type}</td>
                                         <td className="p-4 text-sm text-gray-600">{formatCurrency(cost.value)}</td>
@@ -220,7 +219,7 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
                                         <td className="p-4">
                                             <span className={`px-2 py-1 rounded ${investorColors[cost.investor] || 'bg-gray-50 text-gray-700'} text-xs font-bold`}>{cost.investor}</span>
                                         </td>
-                                        <td className="p-4 text-sm text-gray-600">{new Date(cost.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                                        <td className="p-4 text-sm text-gray-600">{cost.date ? new Date(cost.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/A'}</td>
                                         <td className="p-4 text-center">
                                             {cost.isPaid ? (
                                                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-50 text-green-700 text-xs font-bold border border-green-100">
@@ -234,7 +233,7 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
                                         </td>
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => handleOpenEditModal(cost)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                                                <button onClick={() => onNavigateToEditCost(cost)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                                                     <span className="material-symbols-outlined text-[20px]">edit</span>
                                                 </button>
                                                 <button onClick={() => handleDeleteClick(cost)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
@@ -248,25 +247,25 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onAddNewCost, 
                         </table>
                     </div>
                     <div className="p-5 border-t border-gray-100 flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Mostrando <span className="font-bold text-gray-700">{filteredCosts.length}</span> de <span className="font-bold text-gray-700">{costs.length}</span> custos</span>
-                        <div className="flex items-center gap-1">
-                            <button className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-                                <span className="material-symbols-outlined text-sm">chevron_left</span>
-                            </button>
-                            <button className="size-8 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm">1</button>
-                            <button className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
-                                <span className="material-symbols-outlined text-sm">chevron_right</span>
-                            </button>
-                        </div>
+                        <span className="text-sm text-gray-500">
+                            Mostrando <span className="font-bold text-gray-700">{filteredCosts.length > 0 ? startIndex : 0}-{endIndex}</span> de <span className="font-bold text-gray-700">{filteredCosts.length}</span> custos
+                        </span>
+                         {totalPages > 1 && (
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                                </button>
+                                <span className="px-2 text-sm text-gray-600 font-medium">
+                                    Página {currentPage} de {totalPages}
+                                </span>
+                                <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-            <AddCostModal
-                isOpen={isAddCostModalOpen}
-                onClose={() => setIsAddCostModalOpen(false)}
-                onSave={handleSaveCost}
-                costToEdit={costToEdit}
-            />
             <ConfirmationModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}

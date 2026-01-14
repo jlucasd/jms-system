@@ -40,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate }) => {
 
     const navItems: { icon: string, label: string, page: DashboardPage }[] = [
         { icon: "dashboard", label: "Dashboard", page: 'dashboard' },
+        { icon: "insights", label: "Painel Financeiro", page: 'financialDashboard' },
         { icon: "anchor", label: "Locações", page: 'rentals' },
         { icon: "groups", label: "Clientes", page: 'clients' },
         { icon: "manage_accounts", label: "Usuários", page: 'users' },

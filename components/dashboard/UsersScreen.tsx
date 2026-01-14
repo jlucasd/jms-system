@@ -70,6 +70,8 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<DashboardUser | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const roleDropdownRef = useRef<HTMLDivElement>(null);
     const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -99,6 +101,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedRole, selectedStatus]);
+
     const filteredUsers = useMemo(() => {
         return users.filter(user => {
             const searchTermLower = searchTerm.toLowerCase();
@@ -108,6 +114,20 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
             return matchesSearch && matchesRole && matchesStatus;
         });
     }, [users, searchTerm, selectedRole, selectedStatus]);
+
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const paginatedUsers = useMemo(() => {
+        return filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    }, [filteredUsers, currentPage, itemsPerPage]);
+
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredUsers.length);
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     const handleDeleteClick = (user: DashboardUser) => {
         setUserToDelete(user);
@@ -223,7 +243,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filteredUsers.length > 0 ? filteredUsers.map((user) => (
+                                {paginatedUsers.length > 0 ? paginatedUsers.map((user) => (
                                     <tr key={user.id} className={`hover:bg-blue-50/30 transition-colors group ${user.status === 'Inativo' ? 'opacity-60' : ''}`}>
                                         <td className="py-4 px-6 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
@@ -244,11 +264,11 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
                                         <td className="py-4 px-6 whitespace-nowrap"><StatusBadge status={user.status} /></td>
                                         <td className="py-4 px-6 whitespace-nowrap text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => onNavigateToEditUser(user)} className="size-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-gray-400 hover:text-primary transition" title={'Editar'}>
-                                                    <span className="material-symbols-outlined text-[18px]">edit_square</span>
+                                                <button onClick={() => onNavigateToEditUser(user)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
                                                 </button>
-                                                <button onClick={() => handleDeleteClick(user)} className="size-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition" title="Excluir">
-                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                <button onClick={() => handleDeleteClick(user)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
+                                                    <span className="material-symbols-outlined text-[20px]">delete</span>
                                                 </button>
                                             </div>
                                         </td>
@@ -263,22 +283,23 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
                             </tbody>
                         </table>
                     </div>
-                    <div className="border-t border-gray-100 p-4 flex flex-col sm:flex-row items-center justify-center bg-gray-50/50 mt-auto">
-                        <nav aria-label="Pagination" className="flex items-center justify-center space-x-2">
-                            <a href="#" className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 rounded-l-md">
-                                <span className="sr-only">Anterior</span>
-                                <span className="material-symbols-outlined text-sm">chevron_left</span>
-                            </a>
-                            <a href="#" aria-current="page" className="relative z-10 inline-flex items-center bg-primary px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline-primary rounded-md">1</a>
-                            <a href="#" className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 rounded-md">2</a>
-                            <a href="#" className="relative hidden items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 md:inline-flex rounded-md">3</a>
-                            <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700">...</span>
-                            <a href="#" className="relative hidden items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 md:inline-flex rounded-md">10</a>
-                            <a href="#" className="relative inline-flex items-center px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 rounded-r-md">
-                                <span className="sr-only">Próximo</span>
-                                <span className="material-symbols-outlined text-sm">chevron_right</span>
-                            </a>
-                        </nav>
+                    <div className="border-t border-gray-100 p-4 flex flex-col sm:flex-row items-center justify-between bg-gray-50/50 mt-auto">
+                         <span className="text-sm text-gray-500 mb-2 sm:mb-0">
+                            Mostrando <span className="font-bold text-gray-700">{filteredUsers.length > 0 ? startIndex : 0}-{endIndex}</span> de <span className="font-bold text-gray-700">{filteredUsers.length}</span> usuários
+                        </span>
+                        {totalPages > 1 && (
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                                </button>
+                                <span className="px-2 text-sm text-gray-600 font-medium">
+                                    Página {currentPage} de {totalPages}
+                                </span>
+                                <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

@@ -62,6 +62,8 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [rentalToDelete, setRentalToDelete] = useState<Rental | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
     const statusDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -85,6 +87,10 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedDate, selectedStatus]);
 
     const maskDate = (value: string) => {
         return value
@@ -107,6 +113,20 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
             return matchesSearch && matchesDate && matchesStatus;
         });
     }, [searchTerm, rentals, selectedDate, selectedStatus]);
+
+    const totalPages = Math.ceil(filteredRentals.length / itemsPerPage);
+    const paginatedRentals = useMemo(() => {
+        return filteredRentals.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    }, [filteredRentals, currentPage, itemsPerPage]);
+
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredRentals.length);
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -220,7 +240,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {filteredRentals.map((rental) => (
+                                {paginatedRentals.map((rental) => (
                                     <tr key={rental.id} className="hover:bg-gray-50/50 transition-colors group">
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
@@ -242,8 +262,8 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                                         <td className="p-4 text-sm text-gray-600">{rental.startTime} - {rental.endTime}</td>
                                         <td className="p-4"><StatusBadge status={rental.status} /></td>
                                         <td className="p-4 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => onNavigateToEditRental(rental)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-lg transition-colors" title="Editar">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button onClick={() => onNavigateToEditRental(rental)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                                                     <span className="material-symbols-outlined text-[20px]">edit</span>
                                                 </button>
                                                 <button onClick={() => handleDeleteClick(rental)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
@@ -257,20 +277,22 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                         </table>
                     </div>
                     <div className="p-5 border-t border-gray-100 flex items-center justify-between">
-                        <span className="text-sm text-gray-500">Mostrando <span className="font-bold text-gray-700">1-5</span> de <span className="font-bold text-gray-700">42</span> resultados</span>
-                        <div className="flex items-center gap-1">
-                            <button className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-                                <span className="material-symbols-outlined text-sm">chevron_left</span>
-                            </button>
-                            <button className="size-8 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold shadow-sm">1</button>
-                            <button className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors">2</button>
-                            <button className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors">3</button>
-                            <span className="text-gray-400 px-1">...</span>
-                            <button className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors">8</button>
-                            <button className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
-                                <span className="material-symbols-outlined text-sm">chevron_right</span>
-                            </button>
-                        </div>
+                        <span className="text-sm text-gray-500">
+                           Mostrando <span className="font-bold text-gray-700">{filteredRentals.length > 0 ? startIndex : 0}-{endIndex}</span> de <span className="font-bold text-gray-700">{filteredRentals.length}</span> resultados
+                        </span>
+                        {totalPages > 1 && (
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
+                                </button>
+                                <span className="px-2 text-sm text-gray-600 font-medium">
+                                    Página {currentPage} de {totalPages}
+                                </span>
+                                <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

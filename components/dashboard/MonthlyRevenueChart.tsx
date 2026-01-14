@@ -1,21 +1,6 @@
 
 import React, { useMemo } from 'react';
 
-const MonthlyBar: React.FC<{ height: string; value: string; isSelected?: boolean }> = ({ height, value, isSelected }) => {
-    const bgClass = isSelected 
-        ? "bg-gradient-to-t from-secondary to-[#79eadd] shadow-[0_0_10px_rgba(78,205,196,0.4)]"
-        : "bg-gradient-to-t from-primary to-[#4a7596]";
-    return (
-        <div className="flex flex-col items-center gap-2 w-10 group h-full">
-            <div className={`w-full ${bgClass} rounded-t-sm hover:brightness-110 transition-all duration-300 relative h-full`} style={{ transform: `scaleY(${height})`, transformOrigin: 'bottom' }}>
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-10 transition-opacity">
-                    {value}
-                </div>
-            </div>
-        </div>
-    );
-};
-
 const MonthlyRevenueChart: React.FC<{ year: string; month: string; unit: string; }> = ({ year, month, unit }) => {
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     
@@ -64,19 +49,32 @@ const MonthlyRevenueChart: React.FC<{ year: string; month: string; unit: string;
                     </span>
                 </div>
             </div>
-            <div className="flex-1 flex items-end gap-4 h-80 w-full">
-                <div className="flex flex-col justify-between h-full text-xs text-gray-400 font-medium pb-8 w-14 text-right">
+            <div className="flex-1 flex gap-4 h-80 w-full">
+                <div className="flex flex-col justify-between h-full text-xs text-gray-400 font-medium pb-6 w-14 text-right flex-shrink-0">
                      {yAxisLabels.map(label => <span key={label}>{label}</span>)}
                 </div>
-                <div className="flex-1 h-full overflow-x-auto custom-scrollbar">
-                    <div className="relative h-full min-w-[700px] pr-4">
-                        <div className="flex items-end justify-between gap-4 h-[calc(100%-24px)] border-b border-gray-200">
-                           {monthlyData.map((data) => <MonthlyBar key={data.month} height={data.height} value={data.value} isSelected={data.isSelected} />)}
-                        </div>
-                        <div className="flex justify-between gap-4 h-[24px] items-center">
-                            {monthlyData.map(data => (
-                                 <span key={data.month} className={`text-[10px] font-bold text-center w-10 ${data.isSelected ? 'text-secondary' : 'text-gray-500'} uppercase`}>{data.month}</span>
-                            ))}
+                <div className="flex-1 flex flex-col border-l border-gray-100 overflow-hidden">
+                    <div className="flex-1 overflow-x-auto custom-scrollbar">
+                        <div className="min-w-[600px] h-full flex flex-col">
+                             <div className="flex-1 flex items-end w-full gap-2 md:gap-3 px-2 border-b border-gray-100">
+                                {monthlyData.map((bar, index) => (
+                                    <div key={index} className="flex-1 group h-full relative flex items-end justify-center">
+                                        <div
+                                            className={`w-10/12 max-w-[40px] ${bar.isSelected ? 'bg-secondary' : 'bg-primary'} rounded-t-md group-hover:brightness-110 transition-all duration-300 relative ${bar.isSelected ? 'shadow-[0_0_10px_rgba(78,205,196,0.3)]' : ''}`}
+                                            style={{ height: bar.height }}
+                                        >
+                                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                {bar.value}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex w-full gap-2 md:gap-3 px-2 pt-1 h-6 flex-shrink-0">
+                                {monthlyData.map(bar => (
+                                    <span key={bar.month} className={`flex-1 text-xs font-bold text-center ${bar.isSelected ? 'text-secondary' : 'text-gray-500'}`}>{bar.month}</span>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

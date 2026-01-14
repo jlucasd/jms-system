@@ -43,6 +43,26 @@ export interface Rental {
     paymentMethod?: 'Pix' | 'Cartão' | 'Dinheiro';
 }
 
+export interface Cost {
+    id: number;
+    type: string;
+    value: number;
+    paidValue: number;
+    investor: string;
+    date: string; // YYYY-MM-DD
+    isPaid: boolean;
+}
+
+const initialCosts: Cost[] = [
+    { id: 1, type: "Bola de reboque", value: 450.00, paidValue: 450.00, investor: "Grupo", date: "2022-12-22", isPaid: true },
+    { id: 2, type: "3 Coletes Salva-Vidas", value: 283.00, paidValue: 283.00, investor: "Mayck", date: "2022-12-23", isPaid: true },
+    { id: 3, type: "Revisão Jet Ski", value: 1800.00, paidValue: 0.00, investor: "Grupo", date: "2023-11-10", isPaid: false },
+    { id: 4, type: "Âncora", value: 285.00, paidValue: 285.00, investor: "Grupo", date: "2023-01-15", isPaid: true },
+    { id: 5, type: "Kit Limpeza", value: 77.55, paidValue: 77.55, investor: "Grupo", date: "2023-03-13", isPaid: true },
+    { id: 6, type: "Manutenção Preventiva", value: 1200.00, paidValue: 1200.00, investor: "Grupo", date: new Date().toISOString().split('T')[0], isPaid: true },
+    { id: 7, type: "Combustível", value: 850.00, paidValue: 0.00, investor: "Grupo", date: new Date().toISOString().split('T')[0], isPaid: false },
+];
+
 const initialRentals: Rental[] = [
     { id: 1, clientName: 'Roberto Souza', clientCpf: '123.456.789-10', clientInitial: 'RS', clientPhone: '(11) 98765-4321', date: '2023-11-15', rentalType: 'Meia Diária', startTime: '09:00', endTime: '10:00', status: 'Pendente', location: 'Doca Principal - Marina Azul' },
     { id: 2, clientName: 'Ana Lima', clientCpf: '234.567.890-12', clientInitial: 'AL', clientPhone: '(21) 99887-6655', date: '2023-11-15', rentalType: 'Meia Diária', startTime: '10:30', endTime: '11:00', status: 'Confirmado', location: 'Doca Principal - Marina Azul' },
@@ -87,6 +107,7 @@ const App: React.FC = () => {
   ]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUser[]>(initialDashboardUsers);
   const [rentals, setRentals] = useState<Rental[]>(initialRentals);
+  const [costs, setCosts] = useState<Cost[]>(initialCosts);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [dashboardPage, setDashboardPage] = useState<DashboardPage>('dashboard');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -116,6 +137,13 @@ const App: React.FC = () => {
     setIsAuthenticated(true);
     setCurrentUser(fullUser);
   }
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(null);
+    setCurrentPage('login');
+    setDashboardPage('dashboard');
+  };
 
   const handleAddNewLoginUser = (newUser: User) => {
     setLoginUsers(prevUsers => [...prevUsers, newUser]);
@@ -162,12 +190,29 @@ const App: React.FC = () => {
   const handleDashboardNavigation = (page: DashboardPage) => {
     setDashboardPage(page);
   }
+  
+  const handleAddNewCost = (newCost: Cost) => {
+    setCosts(prev => [newCost, ...prev]);
+    setSuccessMessage('Custo adicionado com sucesso!');
+  };
+
+  const handleUpdateCost = (updatedCost: Cost) => {
+      setCosts(prev => prev.map(c => c.id === updatedCost.id ? updatedCost : c));
+      setSuccessMessage('Custo atualizado com sucesso!');
+  };
+
+  const handleDeleteCost = (costId: number) => {
+      setCosts(prev => prev.filter(c => c.id !== costId));
+      setSuccessMessage('Custo excluído com sucesso!');
+  };
+
 
   if (isAuthenticated) {
     return <DashboardScreen 
       currentUser={currentUser} 
       users={dashboardUsers}
       rentals={rentals}
+      costs={costs}
       activePage={dashboardPage}
       onNavigate={handleDashboardNavigation}
       onAddNewUser={handleAddNewDashboardUser}
@@ -176,8 +221,12 @@ const App: React.FC = () => {
       onAddNewRental={handleAddNewRental}
       onUpdateRental={handleUpdateRental}
       onDeleteRental={handleDeleteRental}
+      onAddNewCost={handleAddNewCost}
+      onUpdateCost={handleUpdateCost}
+      onDeleteCost={handleDeleteCost}
       successMessage={successMessage}
       setSuccessMessage={setSuccessMessage}
+      onLogout={handleLogout}
     />;
   }
 

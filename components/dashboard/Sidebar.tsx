@@ -32,13 +32,11 @@ const NavLink: React.FC<NavLinkProps> = ({ icon, label, page, activePage, onNavi
 };
 
 interface SidebarProps {
-    currentUser: User | null;
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentUser, activePage, onNavigate }) => {
-    const userProfilePicFallback = "https://lh3.googleusercontent.com/aida-public/AB6AXuD5KV1c8iepweSrUE0mKWR4HNex6iAskIblPrIoDeAtHBkI0pepVeO3IsvT8A5O-EiaD1YLLeQJ7qZj8kY7bLq2qwMu5TVDWJ6Am5XVNLol3RJiTpU7R7JlFs6L7CXd7bUwfv3SmWRQdEGA6a_EThmdMtEKNcQmECNv7947DFxzjG6zReoS_U90ly3wXSL1uYSzDtIxv7yKs3LjKWxneOv4reF-JBcmgXi7IEOm3CKyl_ZDBt0ktqKWOkJ4HXQSc91OWAeZaNebHg";
+const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate }) => {
 
     const navItems: { icon: string, label: string, page: DashboardPage }[] = [
         { icon: "dashboard", label: "Dashboard", page: 'dashboard' },
@@ -72,14 +70,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentUser, activePage, onNavigate }
                             />
                         ))}
                     </nav>
-                </div>
-                <div className="flex items-center gap-3 border-t border-gray-100 pt-4 px-2">
-                    <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-white shadow-sm" style={{ backgroundImage: `url("${currentUser?.imageUrl || userProfilePicFallback}")` }} aria-label="User profile picture">
-                    </div>
-                    <div className="flex flex-col overflow-hidden">
-                        <p className="text-[#101419] text-sm font-bold truncate">{currentUser?.fullName || 'Usuário'}</p>
-                        <p className="text-[#58738d] text-xs truncate">{currentUser?.role || 'Visitante'}</p>
-                    </div>
                 </div>
             </div>
         </aside>

@@ -1,26 +1,30 @@
 
 import React, { useMemo } from 'react';
+import { Rental } from '../../App';
 
-const MonthlyRevenueChart: React.FC<{ year: string; month: string; unit: string; }> = ({ year, month, unit }) => {
+const MonthlyRevenueChart: React.FC<{ year: string; month: string; location: string; rentals: Rental[] }> = ({ year, month, location, rentals }) => {
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     
     const { monthlyData, yAxisLabels } = useMemo(() => {
-        const hash = (year + unit).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const filteredRentals = rentals.filter(r => {
+            const yearMatch = year === 'Todos' || r.date.startsWith(year);
+            const locationMatch = location === 'Todos os Locais' || r.location === location;
+            return yearMatch && locationMatch;
+        });
         
-        const revenues = months.map((m, index) => {
-            const seasonalFactor = Math.sin((index - 1) * (Math.PI / 6)) * 0.4 + 0.8;
-            const baseRevenue = 80000;
-            const variation = (hash + index * 10) % 25000;
-            return Math.max(20000, (baseRevenue + variation) * seasonalFactor);
+        const revenuesByMonth = Array(12).fill(0);
+        filteredRentals.forEach(r => {
+            const rentalMonth = new Date(r.date).getUTCMonth();
+            revenuesByMonth[rentalMonth] += r.value;
         });
 
-        const maxRevenue = Math.max(...revenues);
+        const maxRevenue = Math.max(...revenuesByMonth, 1); // Avoid division by zero
         const topY = Math.ceil(maxRevenue * 1.1 / 20000) * 20000;
 
         const monthlyDataResult = months.map((m, index) => ({
             month: m,
-            height: `${(revenues[index] / topY) * 100}%`,
-            value: `R$ ${revenues[index].toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+            height: `${(revenuesByMonth[index] / (topY || 1)) * 100}%`,
+            value: `R$ ${revenuesByMonth[index].toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
             isSelected: month !== 'Todos' && months[index].toLowerCase() === month.substring(0, 3).toLowerCase(),
         }));
         
@@ -34,12 +38,12 @@ const MonthlyRevenueChart: React.FC<{ year: string; month: string; unit: string;
         
         return { monthlyData: monthlyDataResult, yAxisLabels: yAxisLabelsResult };
 
-    }, [year, month, unit]);
+    }, [year, month, location, rentals]);
 
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-primary">Faturamento por Mês ({year})</h3>
+                <h3 className="text-lg font-bold text-primary">Faturamento por Mês ({year === 'Todos' ? 'Geral' : year})</h3>
                 <div className="flex gap-4">
                     <span className="flex items-center gap-1 text-xs font-medium text-gray-500">
                         <span className="size-2 rounded-full bg-primary"></span> Mês

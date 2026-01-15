@@ -55,7 +55,72 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     // State for filters
     const [selectedYear, setSelectedYear] = useState('2024');
     const [selectedMonth, setSelectedMonth] = useState('Todos');
-    const [selectedUnit, setSelectedUnit] = useState('Todas');
+    const [selectedLocation, setSelectedLocation] = useState('Todos os Locais');
+
+    const monthMap: { [key: string]: number } = { 'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3, 'Maio': 4, 'Junho': 5, 'Julho': 6, 'Agosto': 7, 'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11 };
+
+    const availableLocations = useMemo(() => {
+        const locations = new Set(rentals.map(r => r.location));
+        return ['Todos os Locais', ...Array.from(locations).sort()];
+    }, [rentals]);
+
+    const dashboardStats = useMemo(() => {
+        const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const locationFilteredRentals = rentals.filter(r => selectedLocation === 'Todos os Locais' || r.location === selectedLocation);
+
+        const yearFilteredRentals = selectedYear === 'Todos'
+            ? locationFilteredRentals
+            : locationFilteredRentals.filter(r => r.date.startsWith(selectedYear));
+
+        const annualRevenue = yearFilteredRentals.reduce((sum, r) => sum + r.value, 0);
+        const totalRentals = yearFilteredRentals.length;
+
+        let annualTrend = 0;
+        if (selectedYear !== 'Todos') {
+            const prevYear = (parseInt(selectedYear, 10) - 1).toString();
+            const prevYearRevenue = locationFilteredRentals
+                .filter(r => r.date.startsWith(prevYear))
+                .reduce((sum, r) => sum + r.value, 0);
+            annualTrend = prevYearRevenue > 0 ? ((annualRevenue - prevYearRevenue) / prevYearRevenue) * 100 : (annualRevenue > 0 ? 100 : 0);
+        }
+
+        const targetMonthIndex = selectedMonth !== 'Todos' ? monthMap[selectedMonth] : new Date().getMonth();
+        const monthlyRentals = yearFilteredRentals.filter(r => new Date(r.date).getUTCMonth() === targetMonthIndex);
+        const monthlyRevenue = monthlyRentals.reduce((sum, r) => sum + r.value, 0);
+
+        let monthlyTrend = 0;
+        if (selectedYear !== 'Todos') {
+            const prevMonthDate = new Date(parseInt(selectedYear, 10), targetMonthIndex - 1, 1);
+            const prevMonthRentals = locationFilteredRentals.filter(r => {
+                const rentalDate = new Date(r.date);
+                return rentalDate.getUTCFullYear() === prevMonthDate.getFullYear() && rentalDate.getUTCMonth() === prevMonthDate.getMonth();
+            });
+            const prevMonthRevenue = prevMonthRentals.reduce((sum, r) => sum + r.value, 0);
+            monthlyTrend = prevMonthRevenue > 0 ? ((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 : (monthlyRevenue > 0 ? 100 : 0);
+        }
+
+        const getTrendString = (trend: number) => {
+            if (trend === 0) return `+0.0%`;
+            return `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%`;
+        };
+
+        // FIX: Explicitly define trend direction types to prevent TypeScript from widening them to 'string'.
+        const monthlyTrendDirection: 'neutral' | 'up' | 'down' = selectedYear === 'Todos' ? 'neutral' : (monthlyTrend >= 0 ? 'up' : 'down');
+        const annualTrendDirection: 'neutral' | 'up' | 'down' = selectedYear === 'Todos' ? 'neutral' : (annualTrend >= 0 ? 'up' : 'down');
+
+        return {
+            monthRevenue: formatCurrency(monthlyRevenue),
+            yearRevenue: formatCurrency(annualRevenue),
+            totalRentals: totalRentals.toLocaleString('pt-BR'),
+            monthlyTrend: selectedYear === 'Todos' ? 'N/A' : getTrendString(monthlyTrend),
+            annualTrend: selectedYear === 'Todos' ? 'Todos os períodos' : getTrendString(annualTrend),
+            yearTitle: selectedYear === 'Todos' ? 'Faturamento Total' : `Faturamento de ${selectedYear}`,
+            totalRentalsTitle: selectedYear === 'Todos' ? 'Total de Locações (Geral)' : `Total de Locações (${selectedYear})`,
+            monthlyTrendDirection,
+            annualTrendDirection,
+        };
+    }, [rentals, selectedYear, selectedMonth, selectedLocation]);
 
 
     const handleExportPDF = async () => {
@@ -90,26 +155,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             setIsExporting(false);
         }
     };
-    
-    // Simulate data filtering
-    const filteredStats = useMemo(() => {
-        const hash = `${selectedYear}-${selectedMonth}-${selectedUnit}`.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-        const baseMonthRevenue = selectedMonth === 'Todos' ? 128500 : 128500 / (hash % 12 + 1) * 1.5;
-        const baseAnnualRevenue = 1450200;
-        const baseRentals = 3842;
-
-        const monthRevenue = baseMonthRevenue * (1 - (hash % 15) / 100);
-        const yearRevenue = baseAnnualRevenue * (1 - (hash % 10) / 100);
-        const totalRentals = baseRentals * (1 - (hash % 20) / 100);
-
-        return {
-            monthRevenue: `R$ ${monthRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            yearRevenue: `R$ ${yearRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            totalRentals: Math.round(totalRentals).toLocaleString('pt-BR'),
-            trend: `+${hash % 15}%`
-        };
-    }, [selectedYear, selectedMonth, selectedUnit]);
 
     const handleSaveNewUser = (newUser: DashboardUser) => {
         onAddNewUser(newUser);
@@ -204,26 +249,27 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                                 onExportPDF={handleExportPDF} 
                                 isExporting={isExporting} 
                                 year={selectedYear}
-                                unit={selectedUnit}
+                                location={selectedLocation === 'Todos os Locais' ? 'Todos' : selectedLocation}
                             />
                             <DashboardFilters 
                                 selectedYear={selectedYear}
                                 onYearChange={setSelectedYear}
                                 selectedMonth={selectedMonth}
                                 onMonthChange={setSelectedMonth}
-                                selectedUnit={selectedUnit}
-                                onUnitChange={setSelectedUnit}
+                                selectedLocation={selectedLocation}
+                                onLocationChange={setSelectedLocation}
+                                availableLocations={availableLocations}
                             />
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <StatCard title={`Faturamento ${selectedMonth !== 'Todos' ? `de ${selectedMonth}` : 'do Mês'}`} value={filteredStats.monthRevenue} trend={filteredStats.trend} trendDirection="up" icon="calendar_month" />
-                                <StatCard title={`Faturamento de ${selectedYear}`} value={filteredStats.yearRevenue} trend="+8%" trendDirection="up" icon="stacked_line_chart" />
-                                <StatCard title="Total de Locações" value={filteredStats.totalRentals} trend="Realizadas" trendDirection="neutral" icon="sailing" />
+                                <StatCard title={`Faturamento ${selectedMonth !== 'Todos' ? `de ${selectedMonth}` : 'do Mês'}`} value={dashboardStats.monthRevenue} trend={dashboardStats.monthlyTrend} trendDirection={dashboardStats.monthlyTrendDirection} icon="calendar_month" />
+                                <StatCard title={dashboardStats.yearTitle} value={dashboardStats.yearRevenue} trend={dashboardStats.annualTrend} trendDirection={dashboardStats.annualTrendDirection} icon="stacked_line_chart" />
+                                <StatCard title={dashboardStats.totalRentalsTitle} value={dashboardStats.totalRentals} trend="Realizadas" trendDirection="neutral" icon="sailing" />
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <div className="lg:col-span-2"><RevenueChart year={selectedYear} unit={selectedUnit} /></div>
-                                <div><RentalsChart year={selectedYear} month={selectedMonth} unit={selectedUnit} /></div>
+                                <div className="lg:col-span-2"><RevenueChart year={selectedYear} location={selectedLocation} rentals={rentals} /></div>
+                                <div><RentalsChart year={selectedYear} month={selectedMonth} location={selectedLocation} rentals={rentals} /></div>
                             </div>
-                            <div className="lg:col-span-3"><MonthlyRevenueChart year={selectedYear} month={selectedMonth} unit={selectedUnit} /></div>
+                            <div className="lg:col-span-3"><MonthlyRevenueChart year={selectedYear} month={selectedMonth} location={selectedLocation} rentals={rentals} /></div>
                         </div>
                     </div>
                 );

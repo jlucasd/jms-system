@@ -32,9 +32,11 @@ const StatusBadge: React.FC<{ status: RentalStatus }> = ({ status }) => {
 };
 
 const TypeBadge: React.FC<{ type: RentalType }> = ({ type }) => {
+    // FIX: Added style for 'Diária/Meia' to satisfy the RentalType constraint.
     const styles: { [key in RentalType]: string } = {
         'Diária': 'bg-rose-50 text-rose-700 border-rose-100',
-        'Meia Diária': 'bg-purple-50 text-purple-700 border-purple-100'
+        'Meia Diária': 'bg-purple-50 text-purple-700 border-purple-100',
+        'Diária/Meia': 'bg-sky-50 text-sky-700 border-sky-100'
     };
     return (
         <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${styles[type]}`}>

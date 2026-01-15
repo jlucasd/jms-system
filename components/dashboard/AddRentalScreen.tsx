@@ -26,6 +26,8 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
     const [observations, setObservations] = useState('');
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'Pix' | 'Cartão' | 'Dinheiro'>('Pix');
     const [selectedStatus, setSelectedStatus] = useState<RentalStatus>('Pendente');
+    // FIX: Add state for the rental value to address the missing property error.
+    const [value, setValue] = useState('');
 
     useEffect(() => {
         if (isEditMode && rentalToEdit) {
@@ -40,11 +42,13 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             setObservations(rentalToEdit.observations || '');
             setSelectedPaymentMethod(rentalToEdit.paymentMethod || 'Pix');
             setSelectedStatus(rentalToEdit.status);
+            setValue(String(rentalToEdit.value));
         }
     }, [isEditMode, rentalToEdit]);
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
+        // FIX: Add the `value` property to the rental data object to satisfy the `Rental` interface.
         const rentalData: Rental = {
             id: isEditMode && rentalToEdit ? rentalToEdit.id : Date.now(),
             clientName,
@@ -59,6 +63,7 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             observations,
             paymentMethod: selectedPaymentMethod,
             status: selectedStatus,
+            value: parseFloat(value) || 0,
         };
         onSave(rentalData);
     };
@@ -178,6 +183,20 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                         <h3 className="text-lg font-bold text-primary">Pagamento</h3>
                                     </div>
                                     <div className="space-y-6">
+                                        {/* FIX: Add input field for the rental value. */}
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="rentalValue">Valor da Locação (R$)</label>
+                                            <div className="relative">
+                                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">attach_money</span>
+                                                <input 
+                                                    value={value} 
+                                                    onChange={e => setValue(e.target.value)} 
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" 
+                                                    id="rentalValue" 
+                                                    placeholder="Ex: 600.00" 
+                                                    type="number" />
+                                            </div>
+                                        </div>
                                         <div>
                                             <p className="text-sm font-bold text-gray-700 mb-3">Método de Pagamento</p>
                                             <div className="flex flex-wrap gap-2">

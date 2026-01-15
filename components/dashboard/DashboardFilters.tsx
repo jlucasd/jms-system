@@ -6,16 +6,19 @@ interface DashboardFiltersProps {
     onYearChange: (year: string) => void;
     selectedMonth: string;
     onMonthChange: (month: string) => void;
-    selectedUnit: string;
-    onUnitChange: (unit: string) => void;
+    selectedLocation: string;
+    onLocationChange: (location: string) => void;
+    availableLocations: string[];
 }
 
 const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     selectedYear, onYearChange,
     selectedMonth, onMonthChange,
-    selectedUnit, onUnitChange
+    selectedLocation, onLocationChange,
+    availableLocations
 }) => {
     const months = ['Todos', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const years = ['Todos', '2026', '2025', '2024', '2023', '2022'];
 
     return (
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
@@ -30,9 +33,9 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                         onChange={(e) => onYearChange(e.target.value)}
                         className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-2 pl-4 pr-10 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer transition-all hover:bg-gray-100"
                     >
-                        <option value="2024">Ano: 2024</option>
-                        <option value="2023">Ano: 2023</option>
-                        <option value="2022">Ano: 2022</option>
+                        {years.map(year => (
+                           <option key={year} value={year}>Ano: {year}</option>
+                        ))}
                     </select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[18px]">expand_more</span>
                 </div>
@@ -50,13 +53,15 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                 </div>
                 <div className="relative group">
                     <select 
-                        value={selectedUnit}
-                        onChange={(e) => onUnitChange(e.target.value)}
+                        value={selectedLocation}
+                        onChange={(e) => onLocationChange(e.target.value)}
                         className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-2 pl-4 pr-10 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer transition-all hover:bg-gray-100"
                     >
-                        <option value="Todas">Unidade: Todas</option>
-                        <option value="Doca Principal">Doca Principal</option>
-                        <option value="Praia do Forte">Praia do Forte</option>
+                        {availableLocations.map(location => (
+                            <option key={location} value={location}>
+                                {location === 'Todos os Locais' ? 'Local: Todos' : location}
+                            </option>
+                        ))}
                     </select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[18px]">expand_more</span>
                 </div>

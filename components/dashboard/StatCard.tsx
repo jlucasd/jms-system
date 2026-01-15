@@ -5,15 +5,23 @@ interface StatCardProps {
     title: string;
     value: string;
     trend: string;
-    trendDirection: 'up' | 'neutral';
+    trendDirection: 'up' | 'down' | 'neutral';
     icon: string;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendDirection, icon }) => {
     
-    const trendClasses = trendDirection === 'up' 
-        ? "text-emerald-600 bg-emerald-50"
-        : "text-gray-500 bg-gray-50";
+    const trendClasses = {
+        up: "text-emerald-600 bg-emerald-50",
+        down: "text-red-600 bg-red-50",
+        neutral: "text-gray-500 bg-gray-50",
+    }[trendDirection];
+
+    const trendIcon = {
+        up: "trending_up",
+        down: "trending_down",
+        neutral: null
+    }[trendDirection];
 
     return (
         <div className="flex flex-col gap-1 rounded-xl p-6 bg-white border border-gray-100 shadow-sm relative overflow-hidden group">
@@ -24,7 +32,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, trend, trendDirection
             <div className="flex items-end gap-3">
                 <p className="text-primary text-3xl font-bold tracking-tight">{value}</p>
                 <span className={`flex items-center text-xs font-bold px-2 py-1 rounded-full mb-1 ${trendClasses}`}>
-                    {trendDirection === 'up' && <span className="material-symbols-outlined text-[14px] mr-0.5">trending_up</span>}
+                    {trendIcon && <span className="material-symbols-outlined text-[14px] mr-0.5">{trendIcon}</span>}
                      {trend}
                 </span>
             </div>

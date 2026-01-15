@@ -1,26 +1,44 @@
 
 import React, { useMemo } from 'react';
+import { Rental } from '../../App';
 
-const RentalsChart: React.FC<{ year: string; month: string; unit: string; }> = ({ year, month, unit }) => {
+const RentalsChart: React.FC<{ year: string; month: string; location: string; rentals: Rental[] }> = ({ year, month, location, rentals }) => {
     
-    const { dailyPercentage, halfDayPercentage, totalRentals } = useMemo(() => {
-        const hash = (year + month + unit).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const baseDaily = 2497;
-        const baseHalfDay = 1345;
+    const { dailyPercentage, halfDayPercentage, totalRentals, dailyRentals, halfDayRentals } = useMemo(() => {
+        const monthMap: { [key: string]: number } = { 'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3, 'Maio': 4, 'Junho': 5, 'Julho': 6, 'Agosto': 7, 'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11 };
 
-        const daily = Math.round(baseDaily * (1 - (hash % 15) / 100));
-        const halfDay = Math.round(baseHalfDay * (1 - (hash % 20) / 100));
+        const filteredRentals = rentals.filter(r => {
+            const rentalYear = r.date.substring(0, 4);
+            const rentalMonth = new Date(r.date).getUTCMonth();
+            
+            const yearMatch = year === 'Todos' || rentalYear === year;
+            const monthMatch = month === 'Todos' || rentalMonth === monthMap[month];
+            const locationMatch = location === 'Todos os Locais' || r.location === location;
+
+            return yearMatch && monthMatch && locationMatch;
+        });
+
+        let dailyCount = 0;
+        let halfDayCount = 0;
+
+        filteredRentals.forEach(r => {
+            if (r.rentalType === 'Meia Diária') {
+                halfDayCount++;
+            } else { // 'Diária' and 'Diária/Meia'
+                dailyCount++;
+            }
+        });
         
-        const total = daily + halfDay;
+        const total = dailyCount + halfDayCount;
         
         return {
-            dailyPercentage: Math.round((daily / total) * 100),
-            halfDayPercentage: Math.round((halfDay / total) * 100),
+            dailyPercentage: total > 0 ? Math.round((dailyCount / total) * 100) : 0,
+            halfDayPercentage: total > 0 ? Math.round((halfDayCount / total) * 100) : 0,
             totalRentals: total,
-            dailyRentals: daily,
-            halfDayRentals: halfDay
+            dailyRentals: dailyCount,
+            halfDayRentals: halfDayCount
         };
-    }, [year, month, unit]);
+    }, [year, month, location, rentals]);
 
     const radius = 70;
     const circumference = 2 * Math.PI * radius;
@@ -54,7 +72,7 @@ const RentalsChart: React.FC<{ year: string; month: string; unit: string; }> = (
                         />
                     </svg>
                     <div className="absolute inset-0 m-auto size-28 bg-white rounded-full flex items-center justify-center flex-col shadow-sm">
-                        <span className="text-2xl font-bold text-primary">{(totalRentals/1000).toFixed(1)}k</span>
+                        <span className="text-2xl font-bold text-primary">{totalRentals}</span>
                         <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">Total</span>
                     </div>
                 </div>
@@ -63,14 +81,14 @@ const RentalsChart: React.FC<{ year: string; month: string; unit: string; }> = (
                         <span className="size-3 rounded-full bg-primary"></span>
                         <div className="flex flex-col">
                             <span className="text-xs font-bold text-gray-700">Diária ({dailyPercentage}%)</span>
-                            <span className="text-[10px] text-gray-400">{totalRentals} locações</span>
+                            <span className="text-[10px] text-gray-400">{dailyRentals} locações</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="size-3 rounded-full bg-secondary/20"></span>
                         <div className="flex flex-col">
-                            <span className="text-xs font-bold text-gray-700">Meia ({halfDayPercentage}%)</span>
-                            <span className="text-[10px] text-gray-400">{totalRentals} locações</span>
+                            <span className="text-xs font-bold text-gray-700">Meia Diária ({halfDayPercentage}%)</span>
+                            <span className="text-[10px] text-gray-400">{halfDayRentals} locações</span>
                         </div>
                     </div>
                 </div>

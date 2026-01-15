@@ -1,30 +1,48 @@
-
 import React, { useMemo } from 'react';
+import { Rental } from '../../App';
 
-const RevenueChart: React.FC<{ year: string; unit: string; }> = ({ year, unit }) => {
+const RevenueChart: React.FC<{ year: string; location: string; rentals: Rental[] }> = ({ year, location, rentals }) => {
     const { chartData, yAxisLabels } = useMemo(() => {
-        const selectedYear = parseInt(year);
-        const years = Array.from({ length: 5 }, (_, i) => selectedYear - 4 + i);
+        const filteredRentals = rentals.filter(r => location === 'Todos os Locais' || r.location === location);
+
+        // FIX: Replaced 'Array.from' with the spread syntax for better type inference to resolve an 'unknown[]' type error.
+        const allYears: string[] = [...new Set(filteredRentals.map(r => r.date.substring(0, 4)))].sort();
+        const lastFiveYears = allYears.slice(-5);
         
-        const unitHash = unit.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        
-        const revenues = years.map((y, index) => {
-            const baseRevenue = 850000 + (index * 300000);
-            const variation = (y + unitHash) % 250000 - 125000;
-            return baseRevenue + variation;
+        const revenueByYear: { [key: string]: number } = {};
+        lastFiveYears.forEach(y => revenueByYear[y] = 0);
+
+        filteredRentals.forEach(rental => {
+            const rentalYear = rental.date.substring(0, 4);
+            if (revenueByYear.hasOwnProperty(rentalYear)) {
+                revenueByYear[rentalYear] += rental.value;
+            }
         });
 
-        const maxRevenue = Math.max(...revenues);
+        const revenues = lastFiveYears.map(y => revenueByYear[y]);
+        const maxRevenue = Math.max(...revenues, 1);
+
+        // Dynamic step calculation for a "nice" Y-axis
+        const numTicks = 4;
+        const roughStep = maxRevenue / numTicks;
+        const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+        const residual = roughStep / magnitude;
+        let niceStep;
+        if (residual > 5) niceStep = 10 * magnitude;
+        else if (residual > 2) niceStep = 5 * magnitude;
+        else if (residual > 1) niceStep = 2 * magnitude;
+        else niceStep = magnitude;
+
+        const topY = Math.ceil((maxRevenue * 1.05) / niceStep) * niceStep;
+
         const bgColors = ['bg-[#8ba1b6]', 'bg-[#65829d]', 'bg-[#3f6385]', 'bg-[#1a3d61]', 'bg-secondary'];
 
-        const topY = Math.ceil(maxRevenue * 1.05 / 200000) * 200000;
-
-        const chartDataResult = years.map((y, index) => ({
-            label: y.toString(),
+        const chartDataResult = lastFiveYears.map((y, index) => ({
+            label: y,
             value: `R$ ${(revenues[index] / 1000).toFixed(0)}k`,
-            height: `${(revenues[index] / topY) * 100}%`,
-            bgColor: bgColors[index],
-            isCurrent: y === selectedYear,
+            height: `${(revenues[index] / (topY || 1)) * 100}%`,
+            bgColor: bgColors[index % bgColors.length],
+            isCurrent: y === year,
         }));
         
         const yAxisLabelsResult = [
@@ -36,7 +54,7 @@ const RevenueChart: React.FC<{ year: string; unit: string; }> = ({ year, unit })
         ];
 
         return { chartData: chartDataResult, yAxisLabels: yAxisLabelsResult };
-    }, [year, unit]);
+    }, [year, location, rentals]);
     
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col h-full">

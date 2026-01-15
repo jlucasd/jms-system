@@ -5,10 +5,10 @@ interface DashboardHeaderProps {
     onExportPDF: () => void;
     isExporting: boolean;
     year: string;
-    unit: string;
+    location: string;
 }
 
-const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onExportPDF, isExporting, year, unit }) => {
+const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onExportPDF, isExporting, year, location }) => {
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
 
     return (
@@ -22,9 +22,9 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ onExportPDF, isExport
                         <span className="material-symbols-outlined text-sm">bar_chart</span>
                         <span className="text-xs font-bold uppercase tracking-wider">Dashboard Analítico JMS</span>
                     </div>
-                    <h2 className="text-white text-3xl font-bold leading-tight">Visão Geral - {year}</h2>
+                    <h2 className="text-white text-3xl font-bold leading-tight">Visão Geral - {year === 'Todos' ? 'Geral' : year}</h2>
                     <p className="text-gray-200 text-sm font-medium mt-1">
-                        Análise de performance para Unidade: <span className="font-bold">{unit}</span>
+                        Análise de performance para Local: <span className="font-bold">{location}</span>
                     </p>
                 </div>
                 <button

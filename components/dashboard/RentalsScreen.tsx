@@ -247,7 +247,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
                     <div className="p-5 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-4">
                          <div className="flex flex-col sm:flex-row flex-wrap items-center gap-3 w-full lg:w-auto">
-                            <div className="relative w-full sm:w-auto">
+                            <div className="relative w-full sm:w-auto flex-1 md:flex-none">
                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
                                 <input 
                                     className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary" 
@@ -257,7 +257,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <div className="relative w-full sm:w-auto">
+                            <div className="relative w-full sm:w-auto flex-1 md:flex-none">
                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">calendar_today</span>
                                 <input 
                                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary" 
@@ -267,7 +267,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                                     onChange={(e) => setSelectedDate(maskDate(e.target.value))}
                                 />
                             </div>
-                            <div className="relative w-full sm:w-auto" ref={statusDropdownRef}>
+                            <div className="relative w-full sm:w-auto flex-1 md:flex-none" ref={statusDropdownRef}>
                                 <button onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)} className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition whitespace-nowrap w-full justify-between sm:w-48">
                                     <span className="material-symbols-outlined text-[20px] text-gray-500">receipt_long</span>
                                     {selectedStatus}
@@ -287,8 +287,8 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                             Nova Locação
                         </button>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                    <div className="overflow-x-auto rounded-b-xl">
+                        <table className="w-full text-left border-collapse min-w-[900px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>

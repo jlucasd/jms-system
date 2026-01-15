@@ -52,6 +52,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [financialPageView, setFinancialPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    
+    // Mobile Sidebar State
+    const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+    
     const dashboardContentRef = useRef<HTMLDivElement>(null);
 
     // State for filters
@@ -107,7 +111,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             return `${trend > 0 ? '+' : ''}${trend.toFixed(1)}%`;
         };
 
-        // FIX: Explicitly define trend direction types to prevent TypeScript from widening them to 'string'.
         const monthlyTrendDirection: 'neutral' | 'up' | 'down' = selectedYear === 'Todos' ? 'neutral' : (monthlyTrend >= 0 ? 'up' : 'down');
         const annualTrendDirection: 'neutral' | 'up' | 'down' = selectedYear === 'Todos' ? 'neutral' : (annualTrend >= 0 ? 'up' : 'down');
 
@@ -239,6 +242,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setUserPageView('list');
         setRentalPageView('list');
         setFinancialPageView('list');
+        setIsMobileSidebarOpen(false); // Close sidebar on navigation
     }
 
     const renderContent = () => {
@@ -288,7 +292,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         onDeleteUser={onDeleteUser} 
                         successMessage={successMessage} 
                         setSuccessMessage={setSuccessMessage}
-                        currentUser={currentUser} // Passa currentUser
+                        currentUser={currentUser}
                     />;
                 }
                 return <AddUserScreen onCancel={handleCancelUserForm} onSave={userPageView === 'add' ? handleSaveNewUser : handleUpdateUser} userToEdit={userToEdit} />;
@@ -301,7 +305,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         onDeleteRental={onDeleteRental} 
                         successMessage={successMessage} 
                         setSuccessMessage={setSuccessMessage}
-                        currentUser={currentUser} // Passa currentUser
+                        currentUser={currentUser}
                     />;
                 }
                 return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
@@ -314,7 +318,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         onDeleteCost={onDeleteCost}
                         successMessage={successMessage} 
                         setSuccessMessage={setSuccessMessage}
-                        currentUser={currentUser} // Passa currentUser
+                        currentUser={currentUser}
                     />;
                 }
                 return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
@@ -327,11 +331,33 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
     return (
         <div className="relative flex h-screen w-full flex-row overflow-hidden">
-            <Sidebar activePage={activePage} onNavigate={resetViews} currentUser={currentUser} />
+            {/* Mobile Sidebar Overlay */}
+            {isMobileSidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-20 md:hidden backdrop-blur-sm"
+                    onClick={() => setIsMobileSidebarOpen(false)}
+                ></div>
+            )}
+
+            {/* Sidebar with mobile toggle logic passed */}
+            <Sidebar 
+                activePage={activePage} 
+                onNavigate={resetViews} 
+                currentUser={currentUser} 
+                isOpen={isMobileSidebarOpen}
+                onClose={() => setIsMobileSidebarOpen(false)}
+            />
+
             <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-light">
                 <header className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm shrink-0">
-                    <div>
-                        {/* Mobile Menu Button can go here */}
+                    <div className="flex items-center gap-3">
+                         <button 
+                            onClick={() => setIsMobileSidebarOpen(true)}
+                            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                            <span className="material-symbols-outlined">menu</span>
+                        </button>
+                        {/* Show title on mobile only if needed, currently sidebar has title */}
                     </div>
                     <UserMenu currentUser={currentUser} onLogout={onLogout} />
                 </header>

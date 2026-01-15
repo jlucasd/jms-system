@@ -6,9 +6,11 @@ interface SidebarProps {
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
     currentUser: User | null;
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, isOpen = false, onClose }) => {
     const [locationInfo, setLocationInfo] = useState('Localizando...');
     const [isDashboardsOpen, setIsDashboardsOpen] = useState(true);
 
@@ -47,10 +49,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser }
     const iconClasses = (isActive: boolean) => isActive ? "material-symbols-outlined filled" : "material-symbols-outlined";
 
     return (
-        <aside className="hidden md:flex w-64 flex-col border-r border-[#d3dbe4] bg-white shrink-0 z-20 h-full">
-            <div className="flex flex-col h-full">
+        <aside 
+            className={`
+                fixed md:static inset-y-0 left-0 z-30
+                w-64 flex flex-col border-r border-[#d3dbe4] bg-white 
+                transform transition-transform duration-300 ease-in-out
+                ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            `}
+        >
+            <div className="flex flex-col h-full shadow-xl md:shadow-none">
                 {/* Header */}
-                <div className="p-6 border-b border-gray-100">
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="bg-primary flex items-center justify-center rounded-xl size-10 text-white shadow-md shadow-primary/20">
                             <span className="material-symbols-outlined text-[24px]">sailing</span>
@@ -60,6 +69,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser }
                             <p className="text-[#58738d] text-xs font-medium uppercase tracking-wider">{locationInfo}</p>
                         </div>
                     </div>
+                    {/* Close button - Mobile only */}
+                    <button 
+                        onClick={onClose}
+                        className="md:hidden p-1 text-gray-400 hover:text-primary transition-colors"
+                    >
+                        <span className="material-symbols-outlined">close</span>
+                    </button>
                 </div>
 
                 {/* Navigation */}

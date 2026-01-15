@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { Rental } from '../../App';
 
@@ -5,8 +6,8 @@ const RevenueChart: React.FC<{ year: string; location: string; rentals: Rental[]
     const { chartData, yAxisLabels } = useMemo(() => {
         const filteredRentals = rentals.filter(r => location === 'Todos os Locais' || r.location === location);
 
-        // FIX: Replaced 'Array.from' with the spread syntax for better type inference to resolve an 'unknown[]' type error.
-        const allYears: string[] = [...new Set(filteredRentals.map(r => r.date.substring(0, 4)))].sort();
+        // Explicitly cast to string[] to resolve 'unknown[]' assignment error
+        const allYears: string[] = (Array.from(new Set(filteredRentals.map(r => r.date.substring(0, 4)))) as string[]).sort();
         const lastFiveYears = allYears.slice(-5);
         
         const revenueByYear: { [key: string]: number } = {};

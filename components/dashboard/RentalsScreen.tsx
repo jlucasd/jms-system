@@ -179,10 +179,35 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
             `Observações: ${rental.observations || 'Nenhuma'}`
         );
         const location = encodeURIComponent(rental.location);
+        
+        // Adicionando o email como convidado (add) para que o evento apareça na agenda da empresa
+        const companyEmail = 'jmsjetski@gmail.com';
 
-        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateTime}/${endDateTime}&details=${details}&location=${location}`;
+        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateTime}/${endDateTime}&details=${details}&location=${location}&add=${companyEmail}`;
         
         window.open(url, '_blank');
+    };
+
+    const handleWhatsAppShare = (rental: Rental) => {
+        const formattedDate = formatDate(rental.date);
+        
+        // Mensagem formatada com Markdown do WhatsApp
+        const message = 
+`*⚠️ Aviso de Locação - JMS* 🚤
+
+*Cliente:* ${rental.clientName}
+*Contato:* ${rental.clientPhone}
+*Data:* ${formattedDate}
+*Horário:* ${rental.startTime} às ${rental.endTime}
+*Local:* ${rental.location}
+*Tipo:* ${rental.rentalType}
+*Status:* ${rental.status}
+
+*Obs:* ${rental.observations || 'Nenhuma observação.'}`;
+
+        const encodedMessage = encodeURIComponent(message);
+        // Utiliza api.whatsapp.com/send para permitir escolher o contato/grupo
+        window.open(`https://api.whatsapp.com/send?text=${encodedMessage}`, '_blank');
     };
 
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
@@ -299,6 +324,9 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                                         <td className="p-4"><StatusBadge status={rental.status} /></td>
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                <button onClick={() => handleWhatsAppShare(rental)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Enviar aviso no WhatsApp">
+                                                    <span className="material-symbols-outlined text-[20px]">share</span>
+                                                </button>
                                                 <button onClick={() => handleAddToCalendar(rental)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Adicionar ao Google Calendar">
                                                     <span className="material-symbols-outlined text-[20px]">event_available</span>
                                                 </button>

@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import LoginScreen from './components/LoginScreen';
 import ForgotPasswordScreen from './components/ForgotPasswordScreen';
+import ResetPasswordScreen from './components/ResetPasswordScreen';
 import SignUpScreen from './components/SignUpScreen';
 import DashboardScreen from './components/DashboardScreen';
 import { supabase } from './lib/supabase';
 
-type Page = 'login' | 'forgotPassword' | 'signUp';
+type Page = 'login' | 'forgotPassword' | 'resetPassword' | 'signUp';
 export type DashboardPage = 'dashboard' | 'financialDashboard' | 'users' | 'rentals' | 'clients' | 'financial' | 'settings' | 'captainJMS';
 export type User = { 
   email: string; 
@@ -57,6 +58,30 @@ export interface Cost {
     observations?: string;
 }
 
+// Novos tipos para Configurações
+export interface CompanyProfile {
+    id?: number;
+    businessName: string;
+    cnpj: string;
+    phone: string;
+    address: string;
+}
+
+export interface FleetItem {
+    id: number;
+    name: string;
+    color: string;
+    plate: string;
+    status: 'Disponível' | 'Manutenção' | 'Indisponível';
+}
+
+export interface PriceTable {
+    id?: number;
+    halfDay: number;
+    fullDay: number;
+    extraHour: number;
+}
+
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('login');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -71,6 +96,9 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [dashboardPage, setDashboardPage] = useState<DashboardPage>('dashboard');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // State para fluxo de recuperação de senha
+  const [resetEmail, setResetEmail] = useState<string | null>(null);
 
   // --- Helpers de Mapeamento (Banco snake_case <-> App camelCase) ---
 
@@ -178,7 +206,17 @@ const App: React.FC = () => {
   // --- Navigation ---
 
   const navigateToForgotPassword = () => setCurrentPage('forgotPassword');
-  const navigateToLogin = () => setCurrentPage('login');
+  
+  const navigateToResetPassword = (email: string) => {
+    setResetEmail(email);
+    setCurrentPage('resetPassword');
+  };
+
+  const navigateToLogin = () => {
+    setResetEmail(null);
+    setCurrentPage('login');
+  };
+  
   const navigateToSignUp = () => setCurrentPage('signUp');
 
   const handleLoginSuccess = (user: User) => {
@@ -221,7 +259,7 @@ const App: React.FC = () => {
     if (error) {
       alert('Erro ao criar usuário: ' + error.message);
     } else {
-      alert('Usuário criado com sucesso! Faça login.');
+      setSuccessMessage('Usuário cadastrado com sucesso!');
       navigateToLogin();
       // Atualiza lista local para permitir login imediato
       const { data } = await supabase.from('app_users').select('*');
@@ -412,6 +450,19 @@ const App: React.FC = () => {
       setSuccessMessage('Custo excluído com sucesso!');
     }
   };
+  
+  // Handler para redefinição de senha
+  const handlePasswordReset = async () => {
+     // Atualiza lista de usuários para que o login funcione com a nova senha
+     const { data } = await supabase.from('app_users').select('*');
+      if(data) {
+         const formatted = data.map(mapUserFromDB);
+         setDashboardUsers(formatted);
+         setLoginUsers(formatted.map(u => ({ email: u.email, password: u.password, fullName: u.name, role: u.role, imageUrl: u.imageUrl })));
+      }
+      setSuccessMessage('Senha redefinida com sucesso! Faça login.');
+      navigateToLogin();
+  }
 
   // --- Render ---
 
@@ -451,8 +502,29 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      {currentPage === 'login' && <LoginScreen users={loginUsers} onNavigateToForgotPassword={navigateToForgotPassword} onNavigateToSignUp={navigateToSignUp} onLoginSuccess={handleLoginSuccess} />}
-      {currentPage === 'forgotPassword' && <ForgotPasswordScreen onNavigateToLogin={navigateToLogin} />}
+      {currentPage === 'login' && (
+        <LoginScreen 
+            users={loginUsers} 
+            onNavigateToForgotPassword={navigateToForgotPassword} 
+            onNavigateToSignUp={navigateToSignUp} 
+            onLoginSuccess={handleLoginSuccess}
+            successMessage={successMessage}
+            setSuccessMessage={setSuccessMessage}
+        />
+      )}
+      {currentPage === 'forgotPassword' && (
+        <ForgotPasswordScreen 
+            onNavigateToLogin={navigateToLogin} 
+            onNavigateToResetPassword={navigateToResetPassword} 
+        />
+      )}
+      {currentPage === 'resetPassword' && (
+        <ResetPasswordScreen
+            email={resetEmail || ''}
+            onNavigateToLogin={navigateToLogin}
+            onPasswordResetSuccess={handlePasswordReset}
+        />
+      )}
       {currentPage === 'signUp' && <SignUpScreen onNavigateToLogin={navigateToLogin} onAddNewUser={handleAddNewLoginUser} />}
     </div>
   );

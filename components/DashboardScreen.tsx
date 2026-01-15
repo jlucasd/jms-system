@@ -15,6 +15,7 @@ import FinancialScreen from './dashboard/FinancialScreen';
 import AddCostScreen from './dashboard/AddCostScreen';
 import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
 import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
+import SettingsScreen from './dashboard/SettingsScreen';
 import UserMenu from './dashboard/UserMenu';
 import { User, DashboardPage, DashboardUser, Rental, Cost } from '../App';
 
@@ -311,12 +312,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         onNavigateToAddCost={handleNavigateToAddCost}
                         onNavigateToEditCost={handleNavigateToEditCost}
                         onDeleteCost={onDeleteCost}
-                        successMessage={successMessage}
+                        successMessage={successMessage} 
                         setSuccessMessage={setSuccessMessage}
                         currentUser={currentUser} // Passa currentUser
                     />;
                 }
                 return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
+            case 'settings':
+                return <SettingsScreen />;
             default:
                 return null;
         }

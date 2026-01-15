@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../App';
 
 interface LoginFormProps {
@@ -7,15 +7,26 @@ interface LoginFormProps {
   onNavigateToSignUp: () => void;
   onLoginSuccess: (user: User) => void;
   users: User[];
+  successMessage: string | null;
+  setSuccessMessage: (message: string | null) => void;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNavigateToSignUp, onLoginSuccess, users }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNavigateToSignUp, onLoginSuccess, users, successMessage, setSuccessMessage }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const mobileHeaderImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuALIhoMq7jrCC11GuUIer1GD9-GsdpiYk3xqRbYMk5LMnFtZcolrLZ1-WXDps-pC8Nv_JzBbkWu0pEyrDQA4Zh5RQKpj4aFabFkMa3eXaXa3a9AEJ43N2r3Skn5IewnxBNvrY-3Zryq8lQrwCQUXc5qtg9UBG8oFhB-bA1X0ey64qtrVayw66pEhb7iA6zjLbgvw-VFX1ExfWjoI0xGLh3lDwJpVi2h5PGSA433fY94ebmFtAtASimbUpcSb2CVh41ho0ESFLGjfw";
+
+  useEffect(() => {
+    if (successMessage) {
+        const timer = setTimeout(() => {
+            setSuccessMessage(null);
+        }, 4000);
+        return () => clearTimeout(timer);
+    }
+  }, [successMessage, setSuccessMessage]);
 
   const handleLogin = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -47,6 +58,23 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
             </div>
             <span className="text-2xl font-bold text-primary dark:text-white tracking-tight">JMS</span>
           </div>
+          
+          {successMessage && (
+            <div 
+                className="bg-emerald-50 border-emerald-500 text-emerald-800 border-l-4 p-4 rounded-lg flex items-center justify-between shadow-md mb-2"
+                role="alert"
+                style={{ animation: 'fade-in-up 0.5s ease-out' }}
+            >
+                <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined">check_circle</span>
+                    <p className="font-bold text-sm">{successMessage}</p>
+                </div>
+                <button onClick={() => setSuccessMessage(null)} className="text-emerald-800/70 hover:text-emerald-800">
+                    <span className="material-symbols-outlined text-xl">close</span>
+                </button>
+            </div>
+          )}
+
           <div>
             <h1 className="text-text-light dark:text-white tracking-tight text-[32px] font-bold leading-tight">Bem-vindo de volta</h1>
             <p className="text-subtext-light dark:text-subtext-dark text-base font-normal leading-normal mt-2">Entre para gerenciar sua frota.</p>

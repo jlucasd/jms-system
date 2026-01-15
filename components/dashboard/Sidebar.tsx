@@ -155,9 +155,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser }
                     </div>
                 </nav>
 
-                {/* Footer User Profile Summary could go here */}
                 <div className="p-4 border-t border-gray-100 text-xs text-center text-gray-400">
-                    &copy; 2024 JMS Fleet v1.2
+                    &copy; {new Date().getFullYear()} JMS Admin
                 </div>
             </div>
         </aside>

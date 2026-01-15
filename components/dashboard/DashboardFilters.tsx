@@ -18,7 +18,10 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
     availableLocations
 }) => {
     const months = ['Todos', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    const years = ['Todos', '2026', '2025', '2024', '2023', '2022'];
+    
+    // Gera lista de anos dinamicamente: Ano que vem + Ano atual + 4 anos anteriores
+    const currentYear = new Date().getFullYear();
+    const years = ['Todos', (currentYear + 1).toString(), currentYear.toString(), (currentYear - 1).toString(), (currentYear - 2).toString(), (currentYear - 3).toString()];
 
     return (
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">

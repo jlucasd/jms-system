@@ -171,7 +171,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
         </div>
         <div className="mt-auto pt-8 text-center md:text-left">
           <p className="text-xs text-gray-400 dark:text-gray-600">
-            © 2024 JMS. Todos os direitos reservados.
+            © {new Date().getFullYear()} JMS. Todos os direitos reservados.
           </p>
         </div>
       </div>

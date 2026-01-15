@@ -117,7 +117,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onNavigateToLogin, onAddNewUser
         </div>
         <div className="mt-4 pt-4 text-center">
           <p className="text-xs text-gray-400 dark:text-gray-600">
-            © 2024 JMS. Todos os direitos reservados.
+            © {new Date().getFullYear()} JMS. Todos os direitos reservados.
           </p>
         </div>
       </div>

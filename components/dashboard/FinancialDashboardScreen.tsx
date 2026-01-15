@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Cost } from '../../App';
 
@@ -8,8 +9,8 @@ interface FinancialDashboardScreenProps {
 }
 
 const FinancialDashboardScreen: React.FC<FinancialDashboardScreenProps> = ({ costs }) => {
-    const currentYear = new Date().getFullYear().toString();
-    const [selectedYear, setSelectedYear] = useState(currentYear);
+    // Definindo padrão como 'Todos'
+    const [selectedYear, setSelectedYear] = useState('Todos');
     const [selectedInvestor, setSelectedInvestor] = useState('Todos');
     const [selectedStatus, setSelectedStatus] = useState('Todos');
 

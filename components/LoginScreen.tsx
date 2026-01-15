@@ -15,8 +15,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onNavigateToForgotPassword, o
   return (
     <div className="relative flex min-h-screen w-full flex-row overflow-hidden">
       <ImagePanel 
-        title="O mar é seu escritório."
-        subtitle="Gerencie sua frota de jet skis, reservas e equipe operacional com a eficiência que seu negócio merece."
+        title="O mar é nosso escritório."
+        subtitle="Sistema para gerenciamento de negócio da empresa JMS"
       />
       <LoginForm onNavigateToForgotPassword={onNavigateToForgotPassword} onNavigateToSignUp={onNavigateToSignUp} onLoginSuccess={onLoginSuccess} users={users} />
     </div>

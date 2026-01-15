@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Rental, RentalStatus, RentalType } from '../../App';
+import { Rental, RentalStatus, RentalType, User } from '../../App';
 import ConfirmationModal from './ConfirmationModal';
 
 interface RentalsScreenProps {
@@ -10,6 +10,7 @@ interface RentalsScreenProps {
     onDeleteRental: (rentalId: number) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
+    currentUser: User | null;
 }
 
 const StatusBadge: React.FC<{ status: RentalStatus }> = ({ status }) => {
@@ -32,7 +33,6 @@ const StatusBadge: React.FC<{ status: RentalStatus }> = ({ status }) => {
 };
 
 const TypeBadge: React.FC<{ type: RentalType }> = ({ type }) => {
-    // FIX: Added style for 'Diária/Meia' to satisfy the RentalType constraint.
     const styles: { [key in RentalType]: string } = {
         'Diária': 'bg-rose-50 text-rose-700 border-rose-100',
         'Meia Diária': 'bg-purple-50 text-purple-700 border-purple-100',
@@ -57,7 +57,7 @@ const ClientAvatar: React.FC<{ initial: string }> = ({ initial }) => {
     )
 }
 
-const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddRental, onNavigateToEditRental, onDeleteRental, successMessage, setSuccessMessage }) => {
+const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddRental, onNavigateToEditRental, onDeleteRental, successMessage, setSuccessMessage, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('Todos Status');
@@ -70,6 +70,9 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
     const statusDropdownRef = useRef<HTMLDivElement>(null);
 
     const statuses = ['Todos Status', 'Pendente', 'Confirmado', 'Concluído'];
+
+    // Permissão de Edição/Exclusão: Gerente ou Financeiro
+    const canEdit = currentUser?.role?.includes('Gerente') || currentUser?.role?.includes('Financeiro');
     
      useEffect(() => {
         if (successMessage) {
@@ -153,7 +156,38 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
         setRentalToDelete(null);
     };
 
+    const handleAddToCalendar = (rental: Rental) => {
+        if (!rental.date || !rental.startTime || !rental.endTime) {
+            alert("É necessário ter data e horários definidos para adicionar ao calendário.");
+            return;
+        }
+
+        const formatDateForCalendar = (dateStr: string, timeStr: string) => {
+            const cleanDate = dateStr.replace(/-/g, '');
+            const cleanTime = timeStr.replace(/:/g, '') + '00';
+            return `${cleanDate}T${cleanTime}`;
+        };
+
+        const startDateTime = formatDateForCalendar(rental.date, rental.startTime);
+        const endDateTime = formatDateForCalendar(rental.date, rental.endTime);
+
+        const title = encodeURIComponent(`Locação JMS: ${rental.clientName}`);
+        const details = encodeURIComponent(
+            `Cliente: ${rental.clientName}\n` +
+            `Telefone: ${rental.clientPhone}\n` +
+            `Tipo: ${rental.rentalType}\n` +
+            `Observações: ${rental.observations || 'Nenhuma'}`
+        );
+        const location = encodeURIComponent(rental.location);
+
+        const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateTime}/${endDateTime}&details=${details}&location=${location}`;
+        
+        window.open(url, '_blank');
+    };
+
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
+
+    const isDeleteMessage = successMessage?.toLowerCase().includes('excluída');
 
     return (
         <>
@@ -172,15 +206,15 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                 </div>
                  {successMessage && (
                     <div 
-                        className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 p-4 rounded-lg flex items-center justify-between shadow-md" 
+                        className={`${isDeleteMessage ? 'bg-red-50 border-red-500 text-red-800' : 'bg-emerald-50 border-emerald-500 text-emerald-800'} border-l-4 p-4 rounded-lg flex items-center justify-between shadow-md`}
                         role="alert"
                         style={{ animation: 'fade-in-up 0.5s ease-out' }}
                     >
                         <div className="flex items-center gap-3">
-                            <span className="material-symbols-outlined">check_circle</span>
+                            <span className="material-symbols-outlined">{isDeleteMessage ? 'delete' : 'check_circle'}</span>
                             <p className="font-bold text-sm">{successMessage}</p>
                         </div>
-                        <button onClick={() => setSuccessMessage(null)} className="text-emerald-800/70 hover:text-emerald-800">
+                        <button onClick={() => setSuccessMessage(null)} className={`${isDeleteMessage ? 'text-red-800/70 hover:text-red-800' : 'text-emerald-800/70 hover:text-emerald-800'}`}>
                                 <span className="material-symbols-outlined text-xl">close</span>
                         </button>
                     </div>
@@ -265,12 +299,19 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                                         <td className="p-4"><StatusBadge status={rental.status} /></td>
                                         <td className="p-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => onNavigateToEditRental(rental)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
-                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
+                                                <button onClick={() => handleAddToCalendar(rental)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Adicionar ao Google Calendar">
+                                                    <span className="material-symbols-outlined text-[20px]">event_available</span>
                                                 </button>
-                                                <button onClick={() => handleDeleteClick(rental)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
-                                                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                </button>
+                                                {canEdit && (
+                                                    <>
+                                                        <button onClick={() => onNavigateToEditRental(rental)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                                                            <span className="material-symbols-outlined text-[20px]">edit</span>
+                                                        </button>
+                                                        <button onClick={() => handleDeleteClick(rental)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
+                                                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

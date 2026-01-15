@@ -16,27 +16,43 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
     const [status, setStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [role, setRole] = useState('');
+    // Role is now managed as an array of strings internally
+    const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
+
+    const availableRoles = ['Gerente', 'Colaborador', 'Financeiro'];
 
     useEffect(() => {
         if (isEditMode && userToEdit) {
             setFullName(userToEdit.name);
             setEmail(userToEdit.email);
             setStatus(userToEdit.status);
-            setRole(userToEdit.role);
+            // Split the role string into array, trim to ensure clean matches
+            setSelectedRoles(userToEdit.role.split(',').map(r => r.trim()).filter(Boolean));
             setPassword('');
             setConfirmPassword('');
         }
     }, [isEditMode, userToEdit]);
 
+    const handleRoleToggle = (role: string) => {
+        setSelectedRoles(prev => 
+            prev.includes(role) 
+                ? prev.filter(r => r !== role) 
+                : [...prev, role]
+        );
+    };
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
-        if (!fullName || !email || !role) {
-            setError("Os campos Nome, E-mail e Perfil são obrigatórios.");
+        if (!fullName || !email) {
+            setError("Os campos Nome e E-mail são obrigatórios.");
+            return;
+        }
+
+        if (selectedRoles.length === 0) {
+            setError("Selecione pelo menos um perfil de acesso.");
             return;
         }
 
@@ -55,7 +71,7 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
             name: fullName,
             email,
             status,
-            role,
+            role: selectedRoles.join(', '), // Join back to string
             imageUrl: isEditMode && userToEdit ? userToEdit.imageUrl : null,
         };
         
@@ -135,20 +151,32 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
                                     <input value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" id="confirmPassword" placeholder="••••••••" type="password" />
                                 </div>
                             </div>
-                            <div className="col-span-2 md:col-span-2">
-                                <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="role">Perfil de Acesso</label>
-                                <div className="relative">
-                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">badge</span>
-                                    <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary font-medium appearance-none cursor-pointer" id="role">
-                                        <option disabled value="">Selecione o nível de acesso...</option>
-                                        <option value="Gerente">Gerente</option>
-                                        <option value="Atendimento">Atendimento</option>
-                                        <option value="Financeiro">Financeiro</option>
-                                        <option value="Instrutor">Instrutor</option>
-                                    </select>
-                                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-lg">expand_more</span>
+                            <div className="col-span-2">
+                                <label className="block text-sm font-bold text-gray-700 mb-3" htmlFor="role">Perfis de Acesso (Selecione um ou mais)</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    {availableRoles.map((role) => {
+                                        const isSelected = selectedRoles.includes(role);
+                                        return (
+                                            <div 
+                                                key={role}
+                                                onClick={() => handleRoleToggle(role)}
+                                                className={`
+                                                    relative flex items-center p-3 rounded-lg border-2 cursor-pointer transition-all
+                                                    ${isSelected ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}
+                                                `}
+                                            >
+                                                <div className={`
+                                                    size-5 rounded border flex items-center justify-center mr-3 transition-colors
+                                                    ${isSelected ? 'bg-primary border-primary' : 'bg-white border-gray-300'}
+                                                `}>
+                                                    {isSelected && <span className="material-symbols-outlined text-white text-[16px]">check</span>}
+                                                </div>
+                                                <span className={`font-bold text-sm ${isSelected ? 'text-primary' : 'text-gray-600'}`}>{role}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2 ml-1">Cada perfil possui permissões específicas dentro do sistema.</p>
+                                <p className="text-xs text-gray-500 mt-2 ml-1">O usuário terá permissões acumuladas dos perfis selecionados.</p>
                             </div>
                         </div>
                         <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 mt-2">

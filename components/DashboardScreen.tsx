@@ -14,6 +14,7 @@ import AddRentalScreen from './dashboard/AddRentalScreen';
 import FinancialScreen from './dashboard/FinancialScreen';
 import AddCostScreen from './dashboard/AddCostScreen';
 import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
+import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
 import UserMenu from './dashboard/UserMenu';
 import { User, DashboardPage, DashboardUser, Rental, Cost } from '../App';
 
@@ -53,7 +54,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const dashboardContentRef = useRef<HTMLDivElement>(null);
 
     // State for filters
-    const [selectedYear, setSelectedYear] = useState('2024');
+    const [selectedYear, setSelectedYear] = useState('Todos');
     const [selectedMonth, setSelectedMonth] = useState('Todos');
     const [selectedLocation, setSelectedLocation] = useState('Todos os Locais');
 
@@ -275,14 +276,32 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 );
             case 'financialDashboard':
                 return <FinancialDashboardScreen costs={costs} />;
+            case 'captainJMS':
+                return <CaptainJMSScreen currentUser={currentUser} />;
             case 'users':
                 if (userPageView === 'list') {
-                    return <UsersScreen users={users} onNavigateToAddUser={handleNavigateToAddUser} onNavigateToEditUser={handleNavigateToEditUser} onDeleteUser={onDeleteUser} successMessage={successMessage} setSuccessMessage={setSuccessMessage} />;
+                    return <UsersScreen 
+                        users={users} 
+                        onNavigateToAddUser={handleNavigateToAddUser} 
+                        onNavigateToEditUser={handleNavigateToEditUser} 
+                        onDeleteUser={onDeleteUser} 
+                        successMessage={successMessage} 
+                        setSuccessMessage={setSuccessMessage}
+                        currentUser={currentUser} // Passa currentUser
+                    />;
                 }
                 return <AddUserScreen onCancel={handleCancelUserForm} onSave={userPageView === 'add' ? handleSaveNewUser : handleUpdateUser} userToEdit={userToEdit} />;
             case 'rentals':
                 if (rentalPageView === 'list') {
-                    return <RentalsScreen rentals={rentals} onNavigateToAddRental={handleNavigateToAddRental} onNavigateToEditRental={handleNavigateToEditRental} onDeleteRental={onDeleteRental} successMessage={successMessage} setSuccessMessage={setSuccessMessage} />;
+                    return <RentalsScreen 
+                        rentals={rentals} 
+                        onNavigateToAddRental={handleNavigateToAddRental} 
+                        onNavigateToEditRental={handleNavigateToEditRental} 
+                        onDeleteRental={onDeleteRental} 
+                        successMessage={successMessage} 
+                        setSuccessMessage={setSuccessMessage}
+                        currentUser={currentUser} // Passa currentUser
+                    />;
                 }
                 return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
             case 'financial':
@@ -294,6 +313,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         onDeleteCost={onDeleteCost}
                         successMessage={successMessage}
                         setSuccessMessage={setSuccessMessage}
+                        currentUser={currentUser} // Passa currentUser
                     />;
                 }
                 return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
@@ -304,7 +324,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
     return (
         <div className="relative flex h-screen w-full flex-row overflow-hidden">
-            <Sidebar activePage={activePage} onNavigate={resetViews} />
+            <Sidebar activePage={activePage} onNavigate={resetViews} currentUser={currentUser} />
             <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-light">
                 <header className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm shrink-0">
                     <div>

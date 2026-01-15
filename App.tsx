@@ -7,7 +7,7 @@ import DashboardScreen from './components/DashboardScreen';
 import { supabase } from './lib/supabase';
 
 type Page = 'login' | 'forgotPassword' | 'signUp';
-export type DashboardPage = 'dashboard' | 'financialDashboard' | 'users' | 'rentals' | 'clients' | 'financial' | 'settings';
+export type DashboardPage = 'dashboard' | 'financialDashboard' | 'users' | 'rentals' | 'clients' | 'financial' | 'settings' | 'captainJMS';
 export type User = { 
   email: string; 
   password?: string;
@@ -78,7 +78,7 @@ const App: React.FC = () => {
     id: u.id,
     name: u.full_name,
     email: u.email,
-    role: u.role || 'Visitante',
+    role: u.role || 'Colaborador',
     status: u.status as 'Ativo' | 'Inativo',
     imageUrl: u.image_url,
     password: u.password // Apenas para validação interna, idealmente não exposto
@@ -185,7 +185,7 @@ const App: React.FC = () => {
     const dashboardUser = dashboardUsers.find(du => du.email === user.email);
     const fullUser: User = {
         ...user,
-        role: dashboardUser?.role || 'Visitante',
+        role: dashboardUser?.role || 'Colaborador',
         imageUrl: dashboardUser?.imageUrl,
         fullName: dashboardUser?.name || user.fullName,
     };
@@ -214,7 +214,7 @@ const App: React.FC = () => {
       full_name: newUser.fullName,
       email: newUser.email,
       password: newUser.password,
-      role: 'Visitante', // Default
+      role: 'Colaborador', // Default alterado de Visitante para Colaborador
       status: 'Ativo'
     }]);
 
@@ -284,6 +284,7 @@ const App: React.FC = () => {
       alert('Erro ao excluir usuário.');
     } else {
       setDashboardUsers(prev => prev.filter(user => user.id !== userId));
+      setSuccessMessage('Usuário excluído com sucesso!');
     }
   };
 

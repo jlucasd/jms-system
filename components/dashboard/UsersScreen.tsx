@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { DashboardUser } from '../../App';
+import { DashboardUser, User } from '../../App';
 import ConfirmationModal from './ConfirmationModal';
 
 interface UsersScreenProps {
@@ -10,34 +10,49 @@ interface UsersScreenProps {
     onDeleteUser: (userId: string) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
+    currentUser: User | null;
 }
 
 const RoleBadge: React.FC<{ role: string }> = ({ role }) => {
-    let classes = 'bg-gray-100 text-gray-600 border-gray-200';
-    let icon = 'badge';
-    switch (role) {
-        case 'Gerente':
-            classes = 'bg-primary/10 text-primary border-primary/20';
-            icon = 'shield_person';
-            break;
-        case 'Atendimento':
-            classes = 'bg-secondary/10 text-teal-700 border-secondary/20';
-            icon = 'support_agent';
-            break;
-        case 'Financeiro':
-            classes = 'bg-purple-50 text-purple-700 border-purple-100';
-            icon = 'account_balance';
-            break;
-        case 'Instrutor':
-            classes = 'bg-gray-100 text-gray-600 border-gray-200';
-            icon = 'sailing';
-            break;
-    }
+    // Splits role string into array, trims whitespace, and filters empty strings
+    const roles = role.split(',').map(r => r.trim()).filter(Boolean);
+
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${classes}`}>
-            <span className="material-symbols-outlined text-[14px]">{icon}</span>
-            {role}
-        </span>
+        <div className="flex flex-wrap gap-1.5">
+            {roles.map((r, index) => {
+                let classes = 'bg-gray-100 text-gray-600 border-gray-200';
+                let icon = 'badge';
+                switch (r) {
+                    case 'Gerente':
+                        classes = 'bg-primary/10 text-primary border-primary/20';
+                        icon = 'shield_person';
+                        break;
+                    case 'Colaborador':
+                        classes = 'bg-secondary/10 text-teal-700 border-secondary/20';
+                        icon = 'group';
+                        break;
+                    case 'Financeiro':
+                        classes = 'bg-purple-50 text-purple-700 border-purple-100';
+                        icon = 'account_balance';
+                        break;
+                    // Legacy roles fallback
+                    case 'Atendimento':
+                        classes = 'bg-blue-50 text-blue-700 border-blue-200';
+                        icon = 'support_agent';
+                        break;
+                    case 'Instrutor':
+                        classes = 'bg-orange-50 text-orange-700 border-orange-200';
+                        icon = 'sailing';
+                        break;
+                }
+                return (
+                    <span key={index} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${classes}`}>
+                        <span className="material-symbols-outlined text-[14px]">{icon}</span>
+                        {r}
+                    </span>
+                );
+            })}
+        </div>
     );
 };
 
@@ -62,7 +77,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     );
 };
 
-const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, onNavigateToEditUser, onDeleteUser, successMessage, setSuccessMessage }) => {
+const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, onNavigateToEditUser, onDeleteUser, successMessage, setSuccessMessage, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRole, setSelectedRole] = useState('Todos Perfis');
     const [selectedStatus, setSelectedStatus] = useState('Todos Status');
@@ -76,8 +91,11 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
     const roleDropdownRef = useRef<HTMLDivElement>(null);
     const statusDropdownRef = useRef<HTMLDivElement>(null);
 
-    const roles = ['Todos Perfis', 'Gerente', 'Atendimento', 'Financeiro', 'Instrutor'];
+    const roles = ['Todos Perfis', 'Gerente', 'Colaborador', 'Financeiro'];
     const statuses = ['Todos Status', 'Ativo', 'Inativo'];
+    
+    // Permissão de Edição/Exclusão: Gerente ou Financeiro
+    const canEdit = currentUser?.role?.includes('Gerente') || currentUser?.role?.includes('Financeiro');
 
     useEffect(() => {
         if (successMessage) {
@@ -109,7 +127,8 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
         return users.filter(user => {
             const searchTermLower = searchTerm.toLowerCase();
             const matchesSearch = user.name.toLowerCase().includes(searchTermLower) || user.email.toLowerCase().includes(searchTermLower);
-            const matchesRole = selectedRole === 'Todos Perfis' || user.role === selectedRole;
+            // Matches if the user role STRING contains the selected role (for multi-role support)
+            const matchesRole = selectedRole === 'Todos Perfis' || user.role.includes(selectedRole);
             const matchesStatus = selectedStatus === 'Todos Status' || user.status === selectedStatus;
             return matchesSearch && matchesRole && matchesStatus;
         });
@@ -149,6 +168,8 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
 
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
 
+    const isDeleteMessage = successMessage?.toLowerCase().includes('excluído');
+
     return (
         <>
             <div className="flex flex-col gap-6 p-4 md:p-8 max-w-[1400px] mx-auto w-full">
@@ -167,15 +188,15 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
 
                 {successMessage && (
                     <div 
-                        className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 p-4 rounded-lg flex items-center justify-between shadow-md" 
+                        className={`${isDeleteMessage ? 'bg-red-50 border-red-500 text-red-800' : 'bg-emerald-50 border-emerald-500 text-emerald-800'} border-l-4 p-4 rounded-lg flex items-center justify-between shadow-md`}
                         role="alert"
                         style={{ animation: 'fade-in-up 0.5s ease-out' }}
                     >
                         <div className="flex items-center gap-3">
-                            <span className="material-symbols-outlined">check_circle</span>
+                            <span className="material-symbols-outlined">{isDeleteMessage ? 'delete' : 'check_circle'}</span>
                             <p className="font-bold text-sm">{successMessage}</p>
                         </div>
-                        <button onClick={() => setSuccessMessage(null)} className="text-emerald-800/70 hover:text-emerald-800">
+                        <button onClick={() => setSuccessMessage(null)} className={`${isDeleteMessage ? 'text-red-800/70 hover:text-red-800' : 'text-emerald-800/70 hover:text-emerald-800'}`}>
                              <span className="material-symbols-outlined text-xl">close</span>
                         </button>
                     </div>
@@ -224,10 +245,13 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
                             )}
                         </div>
                     </div>
-                    <button onClick={onNavigateToAddUser} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md shadow-primary/20 transition-all active:scale-95 w-full lg:w-auto justify-center">
-                        <span className="material-symbols-outlined text-[20px]">person_add</span>
-                        Adicionar Novo Usuário
-                    </button>
+                    {/* Botão de adicionar também controlado por permissão */}
+                    {canEdit && (
+                        <button onClick={onNavigateToAddUser} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md shadow-primary/20 transition-all active:scale-95 w-full lg:w-auto justify-center">
+                            <span className="material-symbols-outlined text-[20px]">person_add</span>
+                            Adicionar Novo Usuário
+                        </button>
+                    )}
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex-1 flex flex-col min-h-[500px]">
@@ -237,7 +261,7 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
                                 <tr className="bg-white border-b border-gray-200">
                                     <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">Usuário</th>
                                     <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">E-mail</th>
-                                    <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">Perfil de Acesso</th>
+                                    <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">Perfis de Acesso</th>
                                     <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">Status</th>
                                     <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap text-right">Ações</th>
                                 </tr>
@@ -260,17 +284,19 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
                                         <td className="py-4 px-6 whitespace-nowrap">
                                             <span className="text-[#101419] font-medium text-sm">{user.email}</span>
                                         </td>
-                                        <td className="py-4 px-6 whitespace-nowrap"><RoleBadge role={user.role} /></td>
+                                        <td className="py-4 px-6 whitespace-normal max-w-xs"><RoleBadge role={user.role} /></td>
                                         <td className="py-4 px-6 whitespace-nowrap"><StatusBadge status={user.status} /></td>
                                         <td className="py-4 px-6 whitespace-nowrap text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => onNavigateToEditUser(user)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
-                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button onClick={() => handleDeleteClick(user)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
-                                                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                </button>
-                                            </div>
+                                            {canEdit && (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button onClick={() => onNavigateToEditUser(user)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                                                        <span className="material-symbols-outlined text-[20px]">edit</span>
+                                                    </button>
+                                                    <button onClick={() => handleDeleteClick(user)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
+                                                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 )) : (

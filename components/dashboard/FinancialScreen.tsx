@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Cost } from '../../App';
+import { Cost, User } from '../../App';
 import ConfirmationModal from './ConfirmationModal';
 
 interface FinancialScreenProps {
@@ -10,10 +10,11 @@ interface FinancialScreenProps {
     onDeleteCost: (costId: number) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
+    currentUser: User | null;
 }
 
 
-const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAddCost, onNavigateToEditCost, onDeleteCost, successMessage, setSuccessMessage }) => {
+const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAddCost, onNavigateToEditCost, onDeleteCost, successMessage, setSuccessMessage, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPeriod, setSelectedPeriod] = useState('Todos os Períodos');
     const [selectedStatus, setSelectedStatus] = useState('Status: Todos');
@@ -21,6 +22,11 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
     const [costToDelete, setCostToDelete] = useState<Cost | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+
+    // Permissões
+    const isPrivilegedUser = currentUser?.role?.includes('Gerente') || currentUser?.role?.includes('Financeiro');
+    const canEdit = isPrivilegedUser;
+    const canViewSummary = isPrivilegedUser;
 
      useEffect(() => {
         if (successMessage) {
@@ -115,6 +121,8 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
         'Stivison': 'bg-indigo-50 text-indigo-700'
     };
     
+    const isDeleteMessage = successMessage?.toLowerCase().includes('excluído');
+
     return (
         <>
             <div className="flex flex-col gap-6 p-4 md:p-8 max-w-[1400px] mx-auto w-full">
@@ -132,48 +140,52 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                 </div>
                  {successMessage && (
                     <div 
-                        className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 p-4 rounded-lg flex items-center justify-between shadow-md" 
+                        className={`${isDeleteMessage ? 'bg-red-50 border-red-500 text-red-800' : 'bg-emerald-50 border-emerald-500 text-emerald-800'} border-l-4 p-4 rounded-lg flex items-center justify-between shadow-md`}
                         role="alert"
                         style={{ animation: 'fade-in-up 0.5s ease-out' }}
                     >
                         <div className="flex items-center gap-3">
-                            <span className="material-symbols-outlined">check_circle</span>
+                            <span className="material-symbols-outlined">{isDeleteMessage ? 'delete' : 'check_circle'}</span>
                             <p className="font-bold text-sm">{successMessage}</p>
                         </div>
-                        <button onClick={() => setSuccessMessage(null)} className="text-emerald-800/70 hover:text-emerald-800">
+                        <button onClick={() => setSuccessMessage(null)} className={`${isDeleteMessage ? 'text-red-800/70 hover:text-red-800' : 'text-emerald-800/70 hover:text-emerald-800'}`}>
                                 <span className="material-symbols-outlined text-xl">close</span>
                         </button>
                     </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-                        <div className="bg-blue-50 p-3 rounded-lg text-primary">
-                            <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
+                {/* Cards de resumo apenas para usuários privilegiados */}
+                {canViewSummary && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                            <div className="bg-blue-50 p-3 rounded-lg text-primary">
+                                <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Total de Custos</p>
+                                <p className="text-2xl font-bold text-primary">{formatCurrency(summaryData.total)}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">Total de Custos</p>
-                            <p className="text-2xl font-bold text-primary">{formatCurrency(summaryData.total)}</p>
+                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                            <div className="bg-green-50 p-3 rounded-lg text-green-600">
+                                <span className="material-symbols-outlined text-3xl">check_circle</span>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Total Pago</p>
+                                <p className="text-2xl font-bold text-green-600">{formatCurrency(summaryData.paid)}</p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                            <div className="bg-amber-50 p-3 rounded-lg text-amber-600">
+                                <span className="material-symbols-outlined text-3xl">pending_actions</span>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Custos Pendentes</p>
+                                <p className="text-2xl font-bold text-amber-600">{formatCurrency(summaryData.pending)}</p>
+                            </div>
                         </div>
                     </div>
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-                        <div className="bg-green-50 p-3 rounded-lg text-green-600">
-                            <span className="material-symbols-outlined text-3xl">check_circle</span>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">Total Pago</p>
-                            <p className="text-2xl font-bold text-green-600">{formatCurrency(summaryData.paid)}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
-                        <div className="bg-amber-50 p-3 rounded-lg text-amber-600">
-                            <span className="material-symbols-outlined text-3xl">pending_actions</span>
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">Custos Pendentes</p>
-                            <p className="text-2xl font-bold text-amber-600">{formatCurrency(summaryData.pending)}</p>
-                        </div>
-                    </div>
-                </div>
+                )}
+                
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                     <div className="p-5 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-4">
                         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
@@ -232,14 +244,16 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                                             )}
                                         </td>
                                         <td className="p-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button onClick={() => onNavigateToEditCost(cost)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
-                                                    <span className="material-symbols-outlined text-[20px]">edit</span>
-                                                </button>
-                                                <button onClick={() => handleDeleteClick(cost)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
-                                                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                </button>
-                                            </div>
+                                            {canEdit && (
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button onClick={() => onNavigateToEditCost(cost)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
+                                                        <span className="material-symbols-outlined text-[20px]">edit</span>
+                                                    </button>
+                                                    <button onClick={() => handleDeleteClick(cost)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
+                                                        <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

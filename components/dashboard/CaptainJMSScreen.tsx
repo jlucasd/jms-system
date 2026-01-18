@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { User, Rental, Cost } from '../../App';
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import ReactMarkdown from 'react-markdown';
 
 // Declaração para evitar erro de TS2580 se @types/node não estiver instalado
 declare const process: {
@@ -78,8 +77,9 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
         *   O usuário atual é ${currentUser?.fullName || 'um membro da equipe'}.
 
         **Diretrizes de Formatação:**
-        *   Use **Markdown** para formatar. Negrito em valores e nomes.
-        *   Seja conciso. Você está em uma janela de chat pequena. Evite textos longos desnecessários.
+        *   Use **negrito** para valores e nomes importantes.
+        *   Use listas com hífens ou asteriscos para enumerar itens.
+        *   Seja conciso.
     `;
 
     const scrollToBottom = () => {
@@ -155,6 +155,29 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
         }
     };
 
+    // Renderizador simples de Markdown (Negrito e Linhas)
+    const renderMessageText = (text: string) => {
+        return text.split('\n').map((line, i) => {
+            // Verifica se é item de lista
+            const isList = line.trim().startsWith('* ') || line.trim().startsWith('- ');
+            const content = isList ? line.trim().substring(2) : line;
+            
+            // Processa negrito
+            const parts = content.split(/(\*\*.*?\*\*)/g).map((part, j) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return <strong key={j}>{part.slice(2, -2)}</strong>;
+                }
+                return part;
+            });
+
+            if (isList) {
+                 return <div key={i} className="flex gap-2 ml-2 mb-1"><span className="text-primary">•</span><span>{parts}</span></div>;
+            }
+
+            return <div key={i} className={`${line.trim() === '' ? 'h-2' : 'mb-1'}`}>{parts}</div>;
+        });
+    };
+
     return (
         <div className="flex flex-col h-full bg-[#f0f2f5] rounded-2xl overflow-hidden shadow-2xl border border-gray-200">
             {/* Header Compacto */}
@@ -197,8 +220,8 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
                                 : 'bg-white text-gray-800 rounded-tl-none'
                             }
                         `}>
-                            <div className="markdown-body text-xs leading-relaxed break-words">
-                                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            <div className="text-xs leading-relaxed break-words text-gray-800">
+                                {renderMessageText(msg.text)}
                             </div>
                             <div className="flex items-center justify-end gap-1 mt-1 select-none opacity-60">
                                 <span className="text-[9px]">

@@ -1,10 +1,11 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Rental, RentalStatus, RentalType, User } from '../../App';
+import { Rental, RentalStatus, RentalType, User, RentalLocation } from '../../App';
 import ConfirmationModal from './ConfirmationModal';
 
 interface RentalsScreenProps {
     rentals: Rental[];
+    locations: RentalLocation[];
     onNavigateToAddRental: () => void;
     onNavigateToEditRental: (rental: Rental) => void;
     onDeleteRental: (rentalId: number) => void;
@@ -57,7 +58,7 @@ const ClientAvatar: React.FC<{ initial: string }> = ({ initial }) => {
     )
 }
 
-const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddRental, onNavigateToEditRental, onDeleteRental, successMessage, setSuccessMessage, currentUser }) => {
+const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNavigateToAddRental, onNavigateToEditRental, onDeleteRental, successMessage, setSuccessMessage, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('Todos Status');
@@ -65,6 +66,10 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [rentalToDelete, setRentalToDelete] = useState<Rental | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    
+    // Estado de Ordenação
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Rental; direction: 'asc' | 'desc' } | null>(null);
+
     const itemsPerPage = 10;
 
     const statusDropdownRef = useRef<HTMLDivElement>(null);
@@ -105,19 +110,52 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
             .replace(/(\d{4})\d+?$/, '$1');
     };
 
+    const handleSort = (key: keyof Rental) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
     const filteredRentals = useMemo(() => {
         const filterDateValue = selectedDate.length === 10
             ? selectedDate.split('/').reverse().join('-')
             : null;
 
-        return rentals.filter(rental => {
+        let result = rentals.filter(rental => {
             const term = searchTerm.toLowerCase();
             const matchesSearch = rental.clientName.toLowerCase().includes(term) || rental.clientCpf.includes(term);
             const matchesDate = !filterDateValue || rental.date === filterDateValue;
             const matchesStatus = selectedStatus === 'Todos Status' || rental.status === selectedStatus;
             return matchesSearch && matchesDate && matchesStatus;
         });
-    }, [searchTerm, rentals, selectedDate, selectedStatus]);
+
+        if (sortConfig !== null) {
+            result.sort((a, b) => {
+                const aValue = a[sortConfig.key];
+                const bValue = b[sortConfig.key];
+
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return sortConfig.direction === 'asc' 
+                        ? aValue.localeCompare(bValue) 
+                        : bValue.localeCompare(aValue);
+                }
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return result;
+    }, [searchTerm, rentals, selectedDate, selectedStatus, sortConfig]);
 
     const totalPages = Math.ceil(filteredRentals.length / itemsPerPage);
     const paginatedRentals = useMemo(() => {
@@ -179,10 +217,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
             `Observações: ${rental.observations || 'Nenhuma'}`
         );
         const location = encodeURIComponent(rental.location);
-        
-        // Adicionando o email como convidado (add) para que o evento apareça na agenda da empresa
         const companyEmail = 'jmsjetski@gmail.com';
-
         const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateTime}/${endDateTime}&details=${details}&location=${location}&add=${companyEmail}`;
         
         window.open(url, '_blank');
@@ -190,8 +225,6 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
 
     const handleWhatsAppShare = (rental: Rental) => {
         const formattedDate = formatDate(rental.date);
-        
-        // Mensagem formatada com Markdown do WhatsApp
         const message = 
 `*⚠️ Aviso de Locação - JMS* 🚤
 
@@ -206,13 +239,17 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
 *Obs:* ${rental.observations || 'Nenhuma observação.'}`;
 
         const encodedMessage = encodeURIComponent(message);
-        // Utiliza api.whatsapp.com/send para permitir escolher o contato/grupo
         window.open(`https://api.whatsapp.com/send?text=${encodedMessage}`, '_blank');
     };
 
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
 
     const isDeleteMessage = successMessage?.toLowerCase().includes('excluída');
+
+    const renderSortIcon = (key: keyof Rental) => {
+        if (sortConfig?.key !== key) return <span className="material-symbols-outlined text-[16px] text-gray-300 opacity-0 group-hover:opacity-50">unfold_more</span>;
+        return <span className="material-symbols-outlined text-[16px] text-primary">{sortConfig.direction === 'asc' ? 'arrow_drop_up' : 'arrow_drop_down'}</span>;
+    };
 
     return (
         <>
@@ -291,12 +328,24 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                         <table className="w-full text-left border-collapse min-w-[900px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Contato</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Horário</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th onClick={() => handleSort('clientName')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Cliente {renderSortIcon('clientName')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('clientPhone')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Contato {renderSortIcon('clientPhone')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('date')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Data {renderSortIcon('date')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('rentalType')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Tipo {renderSortIcon('rentalType')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('startTime')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Horário {renderSortIcon('startTime')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('status')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Status {renderSortIcon('status')}</div>
+                                    </th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ações</th>
                                 </tr>
                             </thead>
@@ -309,6 +358,8 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, onNavigateToAddR
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-bold text-primary">{rental.clientName}</span>
                                                     <span className="text-xs text-gray-400">CPF: {rental.clientCpf}</span>
+                                                    {/* Mostrar o local em texto menor abaixo do nome */}
+                                                    <span className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5"><span className="material-symbols-outlined text-[10px]">pin_drop</span>{rental.location}</span>
                                                 </div>
                                             </div>
                                         </td>

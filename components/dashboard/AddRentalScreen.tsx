@@ -1,18 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
-import { Rental, RentalType, RentalStatus } from '../../App';
+import { Rental, RentalType, RentalStatus, RentalLocation } from '../../App';
 
 interface AddRentalScreenProps {
     onCancel: () => void;
     onSave: (rental: Rental) => void;
     rentalToEdit: Rental | null;
+    locations: RentalLocation[];
 }
 
 const rentalTypes: RentalType[] = ['Meia Diária', 'Diária'];
 const paymentMethods: ('Pix' | 'Cartão' | 'Dinheiro')[] = ['Pix', 'Cartão', 'Dinheiro'];
 const statuses: RentalStatus[] = ['Pendente', 'Confirmado', 'Concluído'];
 
-const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, rentalToEdit }) => {
+const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, rentalToEdit, locations }) => {
     const isEditMode = !!rentalToEdit;
 
     const [clientName, setClientName] = useState('');
@@ -22,11 +23,10 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
     const [date, setDate] = useState('');
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
-    const [location, setLocation] = useState('Doca Principal - Marina Azul');
+    const [location, setLocation] = useState('');
     const [observations, setObservations] = useState('');
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'Pix' | 'Cartão' | 'Dinheiro'>('Pix');
     const [selectedStatus, setSelectedStatus] = useState<RentalStatus>('Pendente');
-    // FIX: Add state for the rental value to address the missing property error.
     const [value, setValue] = useState('');
 
     useEffect(() => {
@@ -43,12 +43,14 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             setSelectedPaymentMethod(rentalToEdit.paymentMethod || 'Pix');
             setSelectedStatus(rentalToEdit.status);
             setValue(String(rentalToEdit.value));
+        } else if (locations.length > 0) {
+            // Default to first location if adding new
+            setLocation(locations[0].name);
         }
-    }, [isEditMode, rentalToEdit]);
+    }, [isEditMode, rentalToEdit, locations]);
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
-        // FIX: Add the `value` property to the rental data object to satisfy the `Rental` interface.
         const rentalData: Rental = {
             id: isEditMode && rentalToEdit ? rentalToEdit.id : Date.now(),
             clientName,
@@ -59,7 +61,7 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             date,
             startTime,
             endTime,
-            location,
+            location: location || (locations.length > 0 ? locations[0].name : ''),
             observations,
             paymentMethod: selectedPaymentMethod,
             status: selectedStatus,
@@ -153,6 +155,29 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                                 ))}
                                             </div>
                                         </div>
+
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="location">Local de Saída</label>
+                                            <div className="relative">
+                                                <select 
+                                                    value={location} 
+                                                    onChange={e => setLocation(e.target.value)} 
+                                                    className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary font-medium appearance-none"
+                                                    id="location"
+                                                >
+                                                    {locations.length > 0 ? (
+                                                        locations.map(loc => (
+                                                            <option key={loc.id} value={loc.name}>{loc.name}</option>
+                                                        ))
+                                                    ) : (
+                                                        <option value="">Nenhum local cadastrado</option>
+                                                    )}
+                                                </select>
+                                                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-lg">expand_more</span>
+                                            </div>
+                                            {locations.length === 0 && <p className="text-xs text-red-500 mt-1">Cadastre locais nas Configurações.</p>}
+                                        </div>
+
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <div className="md:col-span-1">
                                                 <label className="block text-sm font-bold text-gray-700 mb-2">Data</label>
@@ -183,7 +208,6 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                         <h3 className="text-lg font-bold text-primary">Pagamento</h3>
                                     </div>
                                     <div className="space-y-6">
-                                        {/* FIX: Add input field for the rental value. */}
                                         <div>
                                             <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="rentalValue">Valor da Locação (R$)</label>
                                             <div className="relative">

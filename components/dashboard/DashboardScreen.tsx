@@ -17,14 +17,13 @@ import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
 import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
 import SettingsScreen from './dashboard/SettingsScreen';
 import UserMenu from './dashboard/UserMenu';
-import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation } from '../App';
+import { User, DashboardPage, DashboardUser, Rental, Cost } from '../App';
 
 interface DashboardScreenProps {
     currentUser: User | null;
     users: DashboardUser[];
     rentals: Rental[];
     costs: Cost[];
-    locations: RentalLocation[];
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
     onAddNewUser: (user: DashboardUser) => void;
@@ -36,18 +35,14 @@ interface DashboardScreenProps {
     onAddNewCost: (cost: Cost) => void;
     onUpdateCost: (cost: Cost) => void;
     onDeleteCost: (costId: number) => void;
-    onAddNewLocation: (name: string) => void;
-    onUpdateLocation: (id: number, name: string) => void;
-    onDeleteLocation: (id: number) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
     onLogout: () => void;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
-    currentUser, users, rentals, costs, locations, activePage, onNavigate, onAddNewUser, onUpdateUser, onDeleteUser, 
+    currentUser, users, rentals, costs, activePage, onNavigate, onAddNewUser, onUpdateUser, onDeleteUser, 
     onAddNewRental, onUpdateRental, onDeleteRental, onAddNewCost, onUpdateCost, onDeleteCost,
-    onAddNewLocation, onUpdateLocation, onDeleteLocation,
     successMessage, setSuccessMessage, onLogout 
 }) => {
     const [userPageView, setUserPageView] = useState<'list' | 'add' | 'edit'>('list');
@@ -57,9 +52,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [financialPageView, setFinancialPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
     const [isExporting, setIsExporting] = useState(false);
-    
-    // AI Chat State
-    const [isCaptainChatOpen, setIsCaptainChatOpen] = useState(false);
     
     // Mobile Sidebar State
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -73,15 +65,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
     const monthMap: { [key: string]: number } = { 'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3, 'Maio': 4, 'Junho': 5, 'Julho': 6, 'Agosto': 7, 'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11 };
 
-    // Use locations from prop for filter options instead of raw rental strings
     const availableLocations = useMemo(() => {
-        // Fallback to rental strings if locations prop is empty (to avoid empty filter)
-        if (locations.length > 0) {
-             return ['Todos os Locais', ...locations.map(l => l.name)];
-        }
-        const locationSet = new Set(rentals.map(r => r.location).filter(Boolean));
-        return ['Todos os Locais', ...Array.from(locationSet).sort()];
-    }, [locations, rentals]);
+        const locations = new Set(rentals.map(r => r.location).filter(Boolean));
+        return ['Todos os Locais', ...Array.from(locations).sort()];
+    }, [rentals]);
 
     const dashboardStats = useMemo(() => {
         const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -300,7 +287,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             case 'financialDashboard':
                 return <FinancialDashboardScreen costs={costs} />;
             case 'captainJMS':
-                return <CaptainJMSScreen currentUser={currentUser} onClose={() => setIsCaptainChatOpen(false)} dataContext={{ rentals, costs }} />;
+                return <CaptainJMSScreen currentUser={currentUser} />;
             case 'users':
                 if (userPageView === 'list') {
                     return <UsersScreen 
@@ -318,7 +305,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 if (rentalPageView === 'list') {
                     return <RentalsScreen 
                         rentals={rentals} 
-                        locations={locations}
                         onNavigateToAddRental={handleNavigateToAddRental} 
                         onNavigateToEditRental={handleNavigateToEditRental} 
                         onDeleteRental={onDeleteRental} 
@@ -327,7 +313,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         currentUser={currentUser}
                     />;
                 }
-                return <AddRentalScreen locations={locations} onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
+                return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
             case 'financial':
                  if (financialPageView === 'list') {
                     return <FinancialScreen 
@@ -342,7 +328,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 }
                 return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
             case 'settings':
-                return <SettingsScreen locations={locations} onAddLocation={onAddNewLocation} onUpdateLocation={onUpdateLocation} onDeleteLocation={onDeleteLocation} currentUser={currentUser} />;
+                return <SettingsScreen />;
             default:
                 return null;
         }
@@ -376,6 +362,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         >
                             <span className="material-symbols-outlined">menu</span>
                         </button>
+                        {/* Show title on mobile only if needed, currently sidebar has title */}
                     </div>
                     <UserMenu currentUser={currentUser} onLogout={onLogout} />
                 </header>
@@ -383,42 +370,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     {renderContent()}
                 </div>
             </main>
-
-            {/* Captain JMS Floating Action Button */}
-            <button 
-                onClick={() => setIsCaptainChatOpen(!isCaptainChatOpen)}
-                className={`
-                    fixed bottom-6 right-6 z-50 
-                    h-14 rounded-full shadow-xl 
-                    flex items-center justify-center gap-2 px-5
-                    transition-all duration-300 hover:scale-105 active:scale-95
-                    ${isCaptainChatOpen ? 'bg-red-500' : 'bg-primary'}
-                `}
-                title={isCaptainChatOpen ? "Fechar Chat" : "Falar com Capitão JMS"}
-            >
-                 <span className={`material-symbols-outlined text-white text-2xl transition-transform duration-300 ${isCaptainChatOpen ? 'rotate-90' : ''}`}>
-                    {isCaptainChatOpen ? 'close' : 'smart_toy'}
-                 </span>
-                 <span className="text-white font-bold whitespace-nowrap">
-                    {isCaptainChatOpen ? 'Fechar' : 'Capitão JMS'}
-                 </span>
-            </button>
-
-            {/* Captain JMS Chat Widget */}
-            {isCaptainChatOpen && (
-                <div 
-                    className="fixed bottom-24 right-4 md:right-6 w-[90vw] md:w-96 h-[600px] max-h-[70vh] z-40 animate-[fade-in-up_0.3s_ease-out]"
-                >
-                    <CaptainJMSScreen 
-                        currentUser={currentUser} 
-                        onClose={() => setIsCaptainChatOpen(false)}
-                        dataContext={{
-                            rentals: rentals,
-                            costs: costs
-                        }}
-                    />
-                </div>
-            )}
         </div>
     );
 };

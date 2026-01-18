@@ -13,14 +13,21 @@ interface FinancialScreenProps {
     currentUser: User | null;
 }
 
+const months = ['Todos', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAddCost, onNavigateToEditCost, onDeleteCost, successMessage, setSuccessMessage, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedPeriod, setSelectedPeriod] = useState('Todos os Períodos');
+    const [selectedMonth, setSelectedMonth] = useState('Todos');
     const [selectedStatus, setSelectedStatus] = useState('Status: Todos');
+    const [selectedYear, setSelectedYear] = useState('Todos');
+
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [costToDelete, setCostToDelete] = useState<Cost | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    
+    // Estado de Ordenação
+    const [sortConfig, setSortConfig] = useState<{ key: keyof Cost; direction: 'asc' | 'desc' } | null>(null);
+
     const itemsPerPage = 10;
 
     // Permissões
@@ -39,41 +46,118 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedPeriod, selectedStatus]);
+    }, [searchTerm, selectedMonth, selectedStatus, selectedYear]);
 
-    const filteredCosts = useMemo(() => {
-        const now = new Date();
-        const currentMonth = now.getMonth();
-        const currentYear = now.getFullYear();
+    // Extrai anos disponíveis dos custos
+    const availableYears = useMemo(() => {
+        const years = new Set<string>();
+        costs.forEach(cost => {
+            if (cost.date && cost.date.length >= 4) {
+                years.add(cost.date.substring(0, 4));
+            }
+        });
+        // Ordena decrescente
+        return ['Todos', ...Array.from(years).sort((a, b) => parseInt(b) - parseInt(a))];
+    }, [costs]);
 
+    const handleSort = (key: keyof Cost) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    // 1. Base Filter (Ano, Mês, Busca) - Usado tanto para os Cards quanto para a Tabela
+    const baseCosts = useMemo(() => {
         return costs.filter(cost => {
-            let periodMatch = true;
-            if (cost.date) { 
-                const costDate = new Date(cost.date);
-                if (selectedPeriod === 'Este Mês') {
-                    periodMatch = costDate.getMonth() === currentMonth && costDate.getFullYear() === currentYear;
-                } else if (selectedPeriod === 'Mês Passado') {
-                    const lastMonth = new Date(currentYear, currentMonth - 1, 1);
-                    periodMatch = costDate.getMonth() === lastMonth.getMonth() && costDate.getFullYear() === lastMonth.getFullYear();
+            // Filtro de Mês
+            let monthMatch = true;
+            if (selectedMonth !== 'Todos') {
+                if (cost.date) {
+                    const costMonth = parseInt(cost.date.split('-')[1], 10);
+                    const targetMonthIndex = months.indexOf(selectedMonth);
+                    monthMatch = costMonth === targetMonthIndex;
+                } else {
+                    monthMatch = false;
                 }
-            } else {
-                periodMatch = selectedPeriod === 'Todos os Períodos';
             }
 
+            // Filtro de Ano
+            let yearMatch = true;
+            if (selectedYear !== 'Todos') {
+                yearMatch = cost.date?.startsWith(selectedYear) || false;
+            }
+
+            // Filtro de Busca
+            const searchMatch = searchTerm === '' || 
+                                cost.type.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                cost.investor.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            return monthMatch && yearMatch && searchMatch;
+        });
+    }, [costs, searchTerm, selectedMonth, selectedYear]);
+
+    // 2. Summary Data (Baseado no contexto do período/busca, ignorando o filtro de status da tabela)
+    const summaryData = useMemo(() => {
+        let total = 0;
+        let paid = 0;
+        let pending = 0;
+
+        baseCosts.forEach(cost => {
+            total += cost.value;
+            paid += cost.paidValue;
+
+            // Pendente: Soma dos valores não pagos de itens marcados como pendentes
+            if (!cost.isPaid) {
+                pending += (cost.value - cost.paidValue);
+            }
+        });
+        
+        // Descontos: Custo Total - Valor Pago Total
+        const discounts = total - paid;
+        
+        return { total, paid, pending, discounts };
+    }, [baseCosts]);
+
+    // 3. Filtered Costs (Baseado no baseCosts + Filtro de Status + Ordenação) - Usado para a Tabela
+    const filteredCosts = useMemo(() => {
+        let result = baseCosts.filter(cost => {
+            // Filtro de Status
             let statusMatch = true;
             if (selectedStatus === 'Pago') {
                 statusMatch = cost.isPaid;
             } else if (selectedStatus === 'Pendente') {
                 statusMatch = !cost.isPaid;
             }
-
-            const searchMatch = searchTerm === '' || 
-                                cost.type.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                cost.investor.toLowerCase().includes(searchTerm.toLowerCase());
-            
-            return periodMatch && statusMatch && searchMatch;
+            return statusMatch;
         });
-    }, [costs, searchTerm, selectedPeriod, selectedStatus]);
+
+        if (sortConfig !== null) {
+            result.sort((a, b) => {
+                const aValue = a[sortConfig.key];
+                const bValue = b[sortConfig.key];
+
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return sortConfig.direction === 'asc' 
+                        ? aValue.localeCompare(bValue) 
+                        : bValue.localeCompare(aValue);
+                }
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return result;
+    }, [baseCosts, selectedStatus, sortConfig]);
 
     const totalPages = Math.ceil(filteredCosts.length / itemsPerPage);
     const paginatedCosts = useMemo(() => {
@@ -88,13 +172,6 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
             setCurrentPage(page);
         }
     };
-
-    const summaryData = useMemo(() => {
-        const total = filteredCosts.reduce((acc, cost) => acc + cost.value, 0);
-        const paid = filteredCosts.reduce((acc, cost) => acc + cost.paidValue, 0);
-        const pending = total - paid;
-        return { total, paid, pending };
-    }, [filteredCosts]);
 
     const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     
@@ -122,6 +199,11 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
     };
     
     const isDeleteMessage = successMessage?.toLowerCase().includes('excluído');
+
+    const renderSortIcon = (key: keyof Cost) => {
+        if (sortConfig?.key !== key) return <span className="material-symbols-outlined text-[16px] text-gray-300 opacity-0 group-hover:opacity-50">unfold_more</span>;
+        return <span className="material-symbols-outlined text-[16px] text-primary">{sortConfig.direction === 'asc' ? 'arrow_drop_up' : 'arrow_drop_down'}</span>;
+    };
 
     return (
         <>
@@ -155,7 +237,7 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                 )}
                 {/* Cards de resumo apenas para usuários privilegiados */}
                 {canViewSummary && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
                             <div className="bg-blue-50 p-3 rounded-lg text-primary">
                                 <span className="material-symbols-outlined text-3xl">account_balance_wallet</span>
@@ -183,6 +265,15 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                                 <p className="text-2xl font-bold text-amber-600">{formatCurrency(summaryData.pending)}</p>
                             </div>
                         </div>
+                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                            <div className="bg-teal-50 p-3 rounded-lg text-teal-600">
+                                <span className="material-symbols-outlined text-3xl">savings</span>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Descontos / Economia</p>
+                                <p className="text-2xl font-bold text-teal-600">{formatCurrency(summaryData.discounts)}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
                 
@@ -193,11 +284,19 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
                                 <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary" placeholder="Buscar custo..." type="text" />
                             </div>
-                            <select value={selectedPeriod} onChange={e => setSelectedPeriod(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                                <option>Todos os Períodos</option>
-                                <option>Este Mês</option>
-                                <option>Mês Passado</option>
+                            
+                            <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                                {availableYears.map(year => (
+                                    <option key={year} value={year}>{year === 'Todos' ? 'Ano: Todos' : `Ano: ${year}`}</option>
+                                ))}
                             </select>
+
+                            <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                                {months.map(month => (
+                                    <option key={month} value={month}>{month === 'Todos' ? 'Mês: Todos' : `Mês: ${month}`}</option>
+                                ))}
+                            </select>
+                            
                             <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
                                 <option>Status: Todos</option>
                                 <option>Pago</option>
@@ -213,17 +312,29 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                         <table className="w-full text-left border-collapse min-w-[1000px]">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-100">
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Tipo Investimento/Custo</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Valor (R$)</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Valor Pago (R$)</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Investidor/Responsável</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Data de Compra</th>
-                                    <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Pago</th>
+                                    <th onClick={() => handleSort('type')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Tipo Investimento/Custo {renderSortIcon('type')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('value')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Valor (R$) {renderSortIcon('value')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('paidValue')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Valor Pago (R$) {renderSortIcon('paidValue')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('investor')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Investidor/Responsável {renderSortIcon('investor')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('date')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Data de Compra {renderSortIcon('date')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('isPaid')} className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-center cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center justify-center gap-1">Pago {renderSortIcon('isPaid')}</div>
+                                    </th>
                                     <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {paginatedCosts.map((cost) => (
+                                {paginatedCosts.length > 0 ? paginatedCosts.map((cost) => (
                                     <tr key={cost.id} className="hover:bg-gray-50/50 transition-colors group">
                                         <td className="p-4 text-sm font-bold text-primary">{cost.type}</td>
                                         <td className="p-4 text-sm text-gray-600">{formatCurrency(cost.value)}</td>
@@ -256,7 +367,13 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                                             )}
                                         </td>
                                     </tr>
-                                ))}
+                                )) : (
+                                    <tr>
+                                        <td colSpan={7} className="text-center py-8 text-gray-500">
+                                            Nenhum custo encontrado com os filtros selecionados.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

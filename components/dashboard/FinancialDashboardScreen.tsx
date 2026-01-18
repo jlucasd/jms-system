@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Cost } from '../../App';
 
-const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 interface FinancialDashboardScreenProps {
     costs: Cost[];
@@ -40,10 +40,24 @@ const FinancialDashboardScreen: React.FC<FinancialDashboardScreenProps> = ({ cos
     }, [costs, selectedYear, selectedInvestor, selectedStatus]);
 
     const kpiData = useMemo(() => {
-        const totalCost = filteredCosts.reduce((sum, cost) => sum + cost.value, 0);
-        const totalPaid = filteredCosts.reduce((sum, cost) => sum + cost.paidValue, 0);
-        const pendingBalance = totalCost - totalPaid;
-        return { totalCost, totalPaid, pendingBalance };
+        let totalCost = 0;
+        let totalPaid = 0;
+        let pendingBalance = 0;
+
+        filteredCosts.forEach(cost => {
+            totalCost += cost.value;
+            totalPaid += cost.paidValue;
+
+            // Se NÃO está pago, a diferença é considerada pendência
+            if (!cost.isPaid) {
+                pendingBalance += (cost.value - cost.paidValue);
+            }
+        });
+
+        // Conforme solicitado: Descontos = Total de Custos - Total Pago
+        const totalDiscounts = totalCost - totalPaid;
+
+        return { totalCost, totalPaid, pendingBalance, totalDiscounts };
     }, [filteredCosts]);
     
     const monthlyCostsData = useMemo(() => {
@@ -150,13 +164,13 @@ const FinancialDashboardScreen: React.FC<FinancialDashboardScreenProps> = ({ cos
                     Filtros:
                 </div>
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                    <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
                         {availableYears.map(year => <option key={year} value={year}>{year === 'Todos' ? 'Ano: Todos' : `Ano: ${year}`}</option>)}
                     </select>
-                    <select value={selectedInvestor} onChange={e => setSelectedInvestor(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                    <select value={selectedInvestor} onChange={e => setSelectedInvestor(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
                         {availableInvestors.map(inv => <option key={inv} value={inv}>{inv === 'Todos' ? 'Investidor: Todos' : inv}</option>)}
                     </select>
-                    <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                    <select value={selectedStatus} onChange={e => setSelectedStatus(e.target.value)} className="bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer">
                         <option value="Todos">Status: Todos</option>
                         <option value="Pago">Pago</option>
                         <option value="Pendente">Pendente</option>
@@ -164,7 +178,7 @@ const FinancialDashboardScreen: React.FC<FinancialDashboardScreenProps> = ({ cos
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
                     <div className="bg-blue-50 p-3 rounded-lg text-primary"><span className="material-symbols-outlined text-3xl">account_balance_wallet</span></div>
                     <div>
@@ -184,6 +198,13 @@ const FinancialDashboardScreen: React.FC<FinancialDashboardScreenProps> = ({ cos
                     <div>
                         <p className="text-sm font-medium text-gray-500">Saldo Pendente ({selectedPeriodText})</p>
                         <p className="text-2xl font-bold text-amber-600">{formatCurrency(kpiData.pendingBalance)}</p>
+                    </div>
+                </div>
+                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center gap-4">
+                    <div className="bg-teal-50 p-3 rounded-lg text-teal-600"><span className="material-symbols-outlined text-3xl">savings</span></div>
+                    <div>
+                        <p className="text-sm font-medium text-gray-500">Descontos / Economia</p>
+                        <p className="text-2xl font-bold text-teal-600">{formatCurrency(kpiData.totalDiscounts)}</p>
                     </div>
                 </div>
             </div>
@@ -250,8 +271,8 @@ const FinancialDashboardScreen: React.FC<FinancialDashboardScreenProps> = ({ cos
                                         <p className="text-sm font-medium text-gray-700 truncate" title={item.name}>{item.name}</p>
                                         <p className="text-xs font-bold text-gray-500">{item.percentage}%</p>
                                     </div>
-                                    <div className="w-full bg-gray-100 rounded-full h-2">
-                                        <div className="bg-primary h-2 rounded-full" style={{ width: `${item.percentage}%` }}></div>
+                                    <div className="w-full bg-gray-100 rounded-full h-2.5">
+                                        <div className="bg-primary h-2.5 rounded-full" style={{ width: `${item.percentage}%` }}></div>
                                     </div>
                                 </div>
                             </div>

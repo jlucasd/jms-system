@@ -19,9 +19,13 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 }) => {
     const months = ['Todos', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     
-    // Gera lista de anos dinamicamente: Ano que vem + Ano atual + 4 anos anteriores
+    // Gera lista de anos dinamicamente: Ano atual + 3 anos anteriores + 2022
     const currentYear = new Date().getFullYear();
-    const years = ['Todos', (currentYear + 1).toString(), currentYear.toString(), (currentYear - 1).toString(), (currentYear - 2).toString(), (currentYear - 3).toString()];
+    const generatedYears = [currentYear.toString(), (currentYear - 1).toString(), (currentYear - 2).toString(), (currentYear - 3).toString()];
+    
+    // Garante que 2022 esteja na lista, evitando duplicatas se já estiver incluído no range dinâmico
+    const uniqueYears = Array.from(new Set([...generatedYears, '2022'])).sort((a, b) => parseInt(b) - parseInt(a));
+    const years = ['Todos', ...uniqueYears];
 
     return (
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
@@ -37,7 +41,7 @@ const DashboardFilters: React.FC<DashboardFiltersProps> = ({
                         className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-2 pl-4 pr-10 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer transition-all hover:bg-gray-100"
                     >
                         {years.map(year => (
-                           <option key={year} value={year}>Ano: {year}</option>
+                           <option key={year} value={year}>{year === 'Todos' ? 'Ano: Todos' : `Ano: ${year}`}</option>
                         ))}
                     </select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-[18px]">expand_more</span>

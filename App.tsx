@@ -82,6 +82,11 @@ export interface PriceTable {
     extraHour: number;
 }
 
+export interface RentalLocation {
+    id: number;
+    name: string;
+}
+
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('login');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -92,6 +97,7 @@ const App: React.FC = () => {
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUser[]>([]);
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [costs, setCosts] = useState<Cost[]>([]);
+  const [locations, setLocations] = useState<RentalLocation[]>([]);
   
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [dashboardPage, setDashboardPage] = useState<DashboardPage>('dashboard');
@@ -123,7 +129,7 @@ const App: React.FC = () => {
     startTime: r.start_time || '',
     endTime: r.end_time || '',
     status: r.status as RentalStatus,
-    location: r.location || '',
+    location: (r.location || '').trim(), // Trim para evitar duplicatas no filtro
     observations: r.observations || '',
     paymentMethod: r.payment_method as any,
     value: Number(r.value) || 0
@@ -154,9 +160,9 @@ const App: React.FC = () => {
       setLoginUsers(formattedUsers.map(u => ({ 
         email: u.email, 
         password: u.password, 
-        fullName: u.name,
-        role: u.role,
-        imageUrl: u.imageUrl
+        fullName: u.name, 
+        role: u.role, 
+        imageUrl: u.imageUrl 
       })));
 
       // 2. Rentals
@@ -168,6 +174,15 @@ const App: React.FC = () => {
       const { data: costsData, error: costsError } = await supabase.from('costs').select('*').order('purchase_date', { ascending: false });
       if (costsError) throw costsError;
       setCosts((costsData || []).map(mapCostFromDB));
+
+      // 4. Locations
+      const { data: locationsData, error: locationsError } = await supabase.from('rental_locations').select('*').order('name');
+      if (locationsError && locationsError.code !== '42P01') { // Ignore if table doesn't exist yet
+          console.error(locationsError);
+      }
+      if (locationsData) {
+          setLocations(locationsData.map((l: any) => ({ id: l.id, name: l.name })));
+      }
 
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
@@ -245,14 +260,15 @@ const App: React.FC = () => {
 
   // --- Handlers de Manipulação de Dados (Supabase) ---
 
-  // 1. Usuários
+  // ... (User handlers omitidos para brevidade, mantidos iguais) ...
+    // 1. Usuários
   const handleAddNewLoginUser = async (newUser: User) => {
     // Cadastro público (SignUp screen)
     const { error } = await supabase.from('app_users').insert([{
       full_name: newUser.fullName,
       email: newUser.email,
       password: newUser.password,
-      role: 'Colaborador', // Default alterado de Visitante para Colaborador
+      role: 'Colaborador', 
       status: 'Ativo'
     }]);
 
@@ -261,7 +277,6 @@ const App: React.FC = () => {
     } else {
       setSuccessMessage('Usuário cadastrado com sucesso!');
       navigateToLogin();
-      // Atualiza lista local para permitir login imediato
       const { data } = await supabase.from('app_users').select('*');
       if(data) {
          const formatted = data.map(mapUserFromDB);
@@ -277,7 +292,7 @@ const App: React.FC = () => {
       email: newUser.email,
       role: newUser.role,
       status: newUser.status,
-      password: '123' // Senha padrão se criado pelo dashboard
+      password: '123' 
     }]).select();
 
     if (error) {
@@ -295,7 +310,6 @@ const App: React.FC = () => {
       email: updatedUser.email,
       role: updatedUser.role,
       status: updatedUser.status,
-      // image_url: updatedUser.imageUrl // Se tivéssemos upload real
     }).eq('id', updatedUser.id);
 
     if (error) {
@@ -450,10 +464,40 @@ const App: React.FC = () => {
       setSuccessMessage('Custo excluído com sucesso!');
     }
   };
+
+  // 4. Locations Handlers
+  const handleAddNewLocation = async (name: string) => {
+      const { data, error } = await supabase.from('rental_locations').insert([{ name }]).select();
+      if(error) {
+          alert('Erro ao adicionar local: ' + error.message);
+      } else if (data) {
+          setLocations(prev => [...prev, { id: data[0].id, name: data[0].name }].sort((a,b) => a.name.localeCompare(b.name)));
+          setSuccessMessage('Local adicionado com sucesso!');
+      }
+  };
+
+  const handleUpdateLocation = async (id: number, name: string) => {
+      const { error } = await supabase.from('rental_locations').update({ name }).eq('id', id);
+      if (error) {
+          alert('Erro ao atualizar local: ' + error.message);
+      } else {
+          setLocations(prev => prev.map(l => l.id === id ? { ...l, name } : l).sort((a,b) => a.name.localeCompare(b.name)));
+          setSuccessMessage('Local atualizado com sucesso!');
+      }
+  };
+
+  const handleDeleteLocation = async (id: number) => {
+      const { error } = await supabase.from('rental_locations').delete().eq('id', id);
+      if(error) {
+          alert('Erro ao excluir local.');
+      } else {
+          setLocations(prev => prev.filter(l => l.id !== id));
+          setSuccessMessage('Local removido com sucesso!');
+      }
+  };
   
   // Handler para redefinição de senha
   const handlePasswordReset = async () => {
-     // Atualiza lista de usuários para que o login funcione com a nova senha
      const { data } = await supabase.from('app_users').select('*');
       if(data) {
          const formatted = data.map(mapUserFromDB);
@@ -483,6 +527,7 @@ const App: React.FC = () => {
       users={dashboardUsers}
       rentals={rentals}
       costs={costs}
+      locations={locations} // Pass locations
       activePage={dashboardPage}
       onNavigate={handleDashboardNavigation}
       onAddNewUser={handleAddNewDashboardUser}
@@ -494,6 +539,9 @@ const App: React.FC = () => {
       onAddNewCost={handleAddNewCost}
       onUpdateCost={handleUpdateCost}
       onDeleteCost={handleDeleteCost}
+      onAddNewLocation={handleAddNewLocation} // Pass location handlers
+      onUpdateLocation={handleUpdateLocation} // Pass location handlers
+      onDeleteLocation={handleDeleteLocation} // Pass location handlers
       successMessage={successMessage}
       setSuccessMessage={setSuccessMessage}
       onLogout={handleLogout}

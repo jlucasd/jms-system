@@ -1,10 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { CompanyProfile, FleetItem, PriceTable } from '../../App';
+import { CompanyProfile, FleetItem, PriceTable, RentalLocation, User } from '../../App';
 
-const SettingsScreen: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<'profile' | 'fleet' | 'prices'>('profile');
+interface SettingsScreenProps {
+    locations?: RentalLocation[];
+    onAddLocation?: (name: string) => void;
+    onUpdateLocation?: (id: number, name: string) => void;
+    onDeleteLocation?: (id: number) => void;
+    currentUser: User | null;
+}
+
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLocation, onUpdateLocation, onDeleteLocation, currentUser }) => {
+    const [activeTab, setActiveTab] = useState<'profile' | 'fleet' | 'prices' | 'locations'>('profile');
     const [isLoading, setIsLoading] = useState(false);
     
     // Feedback States
@@ -26,6 +34,11 @@ const SettingsScreen: React.FC = () => {
         fullDay: 0,
         extraHour: 0
     });
+    
+    // Location States
+    const [newLocationName, setNewLocationName] = useState('');
+    const [editingLocationId, setEditingLocationId] = useState<number | null>(null);
+    const [editingLocationName, setEditingLocationName] = useState('');
 
     // States for Fleet Modal
     const [isFleetModalOpen, setIsFleetModalOpen] = useState(false);
@@ -37,6 +50,9 @@ const SettingsScreen: React.FC = () => {
     const [fleetStatus, setFleetStatus] = useState<'Disponível' | 'Manutenção' | 'Indisponível'>('Disponível');
 
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
+
+    // Permission Check
+    const canEdit = currentUser?.role?.includes('Gerente') || currentUser?.role?.includes('Financeiro');
 
     // --- Data Fetching ---
     useEffect(() => {
@@ -146,6 +162,37 @@ const SettingsScreen: React.FC = () => {
             showError('Erro ao salvar tabela de preços: ' + error.message);
         } else {
             showSuccess('Tabela de preços atualizada com sucesso!');
+        }
+    };
+
+    // Location Handlers
+    const handleAddLocationClick = () => {
+        if (!newLocationName.trim()) {
+            showError('Digite o nome do local.');
+            return;
+        }
+        if (onAddLocation) {
+             onAddLocation(newLocationName);
+             setNewLocationName('');
+        }
+    };
+
+    const startEditingLocation = (loc: RentalLocation) => {
+        setEditingLocationId(loc.id);
+        setEditingLocationName(loc.name);
+    };
+
+    const cancelEditingLocation = () => {
+        setEditingLocationId(null);
+        setEditingLocationName('');
+    };
+
+    const saveEditingLocation = () => {
+        if (editingLocationName.trim() && editingLocationId !== null && onUpdateLocation) {
+            onUpdateLocation(editingLocationId, editingLocationName);
+            cancelEditingLocation();
+        } else {
+            showError('Nome do local não pode ser vazio.');
         }
     };
 
@@ -271,6 +318,13 @@ const SettingsScreen: React.FC = () => {
                 >
                     <span className="material-symbols-outlined text-[18px]">price_change</span>
                     Tabela de Preços
+                </button>
+                <button 
+                    onClick={() => setActiveTab('locations')}
+                    className={`flex-1 md:flex-none px-6 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'locations' ? 'bg-primary text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+                >
+                    <span className="material-symbols-outlined text-[18px]">pin_drop</span>
+                    Locais
                 </button>
             </div>
 
@@ -413,6 +467,83 @@ const SettingsScreen: React.FC = () => {
                                     <span className="material-symbols-outlined">save</span>
                                     Atualizar Preços
                                 </button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {activeTab === 'locations' && (
+                        <div className="max-w-2xl animate-[fade-in-up_0.3s_ease-out]">
+                            <div className="mb-6 border-b border-gray-100 pb-4">
+                                <h3 className="text-lg font-bold text-primary">Locais de Saída</h3>
+                                <p className="text-sm text-gray-500">Defina os locais de partida disponíveis para as locações.</p>
+                            </div>
+
+                            {canEdit && (
+                                <div className="flex gap-2 mb-6">
+                                    <input 
+                                        type="text" 
+                                        value={newLocationName} 
+                                        onChange={(e) => setNewLocationName(e.target.value)} 
+                                        placeholder="Nome do local (ex: Marina Azul)" 
+                                        className="flex-1 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+                                    />
+                                    <button 
+                                        onClick={handleAddLocationClick}
+                                        className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all"
+                                    >
+                                        Adicionar
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                {locations.length === 0 && <p className="text-gray-500 text-sm italic">Nenhum local cadastrado.</p>}
+                                {locations.map(loc => (
+                                    <div key={loc.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-all group">
+                                        {editingLocationId === loc.id ? (
+                                            <div className="flex items-center gap-2 flex-1">
+                                                <input 
+                                                    type="text" 
+                                                    value={editingLocationName}
+                                                    onChange={(e) => setEditingLocationName(e.target.value)}
+                                                    className="flex-1 px-3 py-1.5 bg-white border border-secondary rounded-lg text-sm focus:outline-none"
+                                                    autoFocus
+                                                />
+                                                <button onClick={saveEditingLocation} className="text-green-600 hover:bg-green-50 p-1.5 rounded transition-colors" title="Salvar">
+                                                    <span className="material-symbols-outlined text-[20px]">check</span>
+                                                </button>
+                                                <button onClick={cancelEditingLocation} className="text-gray-400 hover:bg-gray-100 p-1.5 rounded transition-colors" title="Cancelar">
+                                                    <span className="material-symbols-outlined text-[20px]">close</span>
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="material-symbols-outlined text-gray-400">pin_drop</span>
+                                                    <span className="text-sm font-medium text-gray-700">{loc.name}</span>
+                                                </div>
+                                                {canEdit && (
+                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button 
+                                                            onClick={() => startEditingLocation(loc)}
+                                                            className="text-gray-400 hover:text-primary p-1.5 rounded-lg transition-colors"
+                                                            title="Editar local"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => onDeleteLocation && onDeleteLocation(loc.id)}
+                                                            className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg transition-colors"
+                                                            title="Remover local"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}

@@ -118,15 +118,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                     <div className="pt-2">
                         <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Operacional</span>
                         
-                         <a 
-                            href="#"
-                            onClick={(e) => { e.preventDefault(); onNavigate('captainJMS'); }}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'captainJMS' ? activeClasses : inactiveClasses}`}
-                        >
-                            <span className={iconClasses(activePage === 'captainJMS')}>smart_toy</span>
-                            IA - Capitão JMS
-                        </a>
-
                         <a 
                             href="#"
                             onClick={(e) => { e.preventDefault(); onNavigate('rentals'); }}

@@ -1,6 +1,6 @@
 {
   "name": "JMS Admin",
-  "description": "A login screen for the JMS jet ski fleet management application, featuring a modern design with a split-screen layout.",
+  "description": "Uma tela de login para o aplicativo de gestão de frota de jet skis JMS, com um design moderno e layout dividido.",
   "requestFramePermissions": [
     "geolocation"
   ]

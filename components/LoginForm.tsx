@@ -15,11 +15,19 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const mobileHeaderImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuALIhoMq7jrCC11GuUIer1GD9-GsdpiYk3xqRbYMk5LMnFtZcolrLZ1-WXDps-pC8Nv_JzBbkWu0pEyrDQA4Zh5RQKpj4aFabFkMa3eXaXa3a9AEJ43N2r3Skn5IewnxBNvrY-3Zryq8lQrwCQUXc5qtg9UBG8oFhB-bA1X0ey64qtrVayw66pEhb7iA6zjLbgvw-VFX1ExfWjoI0xGLh3lDwJpVi2h5PGSA433fY94ebmFtAtASimbUpcSb2CVh41ho0ESFLGjfw";
 
   useEffect(() => {
+    // Verifica se há um e-mail salvo no localStorage
+    const savedEmail = localStorage.getItem('jms_remembered_email');
+    if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+    }
+
     if (successMessage) {
         const timer = setTimeout(() => {
             setSuccessMessage(null);
@@ -33,6 +41,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
     setError(null);
     const user = users.find(u => u.email === email && u.password === password);
     if (user) {
+      // Lógica do Lembrar de mim
+      if (rememberMe) {
+          localStorage.setItem('jms_remembered_email', email);
+      } else {
+          localStorage.removeItem('jms_remembered_email');
+      }
       onLoginSuccess(user);
     } else {
       setError('Credenciais inválidas. Tente novamente.');
@@ -126,7 +140,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
           </label>
           <div className="flex flex-wrap items-center justify-between gap-3 mt-1">
             <label className="flex items-center gap-2 cursor-pointer group">
-              <input className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-primary focus:ring-accent transition-colors cursor-pointer" type="checkbox" />
+              <input 
+                className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-800 text-primary focus:ring-accent transition-colors cursor-pointer" 
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
               <span className="text-sm text-subtext-light dark:text-subtext-dark group-hover:text-primary dark:group-hover:text-white transition-colors">Lembrar de mim</span>
             </label>
             <a 

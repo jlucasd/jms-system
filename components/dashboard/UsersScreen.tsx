@@ -86,6 +86,10 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<DashboardUser | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
+    
+    // Estado de Ordenação
+    const [sortConfig, setSortConfig] = useState<{ key: keyof DashboardUser; direction: 'asc' | 'desc' } | null>(null);
+
     const itemsPerPage = 10;
 
     const roleDropdownRef = useRef<HTMLDivElement>(null);
@@ -123,8 +127,16 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
         setCurrentPage(1);
     }, [searchTerm, selectedRole, selectedStatus]);
 
+    const handleSort = (key: keyof DashboardUser) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
     const filteredUsers = useMemo(() => {
-        return users.filter(user => {
+        let result = users.filter(user => {
             const searchTermLower = searchTerm.toLowerCase();
             const matchesSearch = user.name.toLowerCase().includes(searchTermLower) || user.email.toLowerCase().includes(searchTermLower);
             // Matches if the user role STRING contains the selected role (for multi-role support)
@@ -132,7 +144,27 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
             const matchesStatus = selectedStatus === 'Todos Status' || user.status === selectedStatus;
             return matchesSearch && matchesRole && matchesStatus;
         });
-    }, [users, searchTerm, selectedRole, selectedStatus]);
+
+        if (sortConfig !== null) {
+            result.sort((a, b) => {
+                const aValue = a[sortConfig.key];
+                const bValue = b[sortConfig.key];
+
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+
+        return result;
+    }, [users, searchTerm, selectedRole, selectedStatus, sortConfig]);
 
     const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
     const paginatedUsers = useMemo(() => {
@@ -169,6 +201,11 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
     const headerImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuD3vRg9di2UIacwy7mm9xO2UHXHU8DEIbPIjW_QkUDJdfwFW-hgZpmGy691nw1lqSXqekfPEl_sMHmtmBpfkp8ucMIfnc2DWlKfNsd1ZCN56JSJhlUmcciNAnv58vtESNnLhdLG1_gxp5FwEMaGsdq6frmu3WbWZXCtwR403yMri8wWVQNvolLkmBpzxHm2KfaPbfvAKu7DnsWQFD9pHtTnpxm-vWtkiYPvU3Q4bdB7Bqq0lgK0Hvw4-7dYz8T3CV4Lnm_oVWZF_g";
 
     const isDeleteMessage = successMessage?.toLowerCase().includes('excluído');
+
+    const renderSortIcon = (key: keyof DashboardUser) => {
+        if (sortConfig?.key !== key) return <span className="material-symbols-outlined text-[16px] text-gray-300 opacity-0 group-hover:opacity-50">unfold_more</span>;
+        return <span className="material-symbols-outlined text-[16px] text-primary">{sortConfig.direction === 'asc' ? 'arrow_drop_up' : 'arrow_drop_down'}</span>;
+    };
 
     return (
         <>
@@ -259,10 +296,18 @@ const UsersScreen: React.FC<UsersScreenProps> = ({ users, onNavigateToAddUser, o
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-white border-b border-gray-200">
-                                    <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">Usuário</th>
-                                    <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">E-mail</th>
-                                    <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">Perfis de Acesso</th>
-                                    <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap">Status</th>
+                                    <th onClick={() => handleSort('name')} className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Usuário {renderSortIcon('name')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('email')} className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">E-mail {renderSortIcon('email')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('role')} className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Perfis de Acesso {renderSortIcon('role')}</div>
+                                    </th>
+                                    <th onClick={() => handleSort('status')} className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap cursor-pointer hover:bg-gray-50 group transition-colors">
+                                        <div className="flex items-center gap-1">Status {renderSortIcon('status')}</div>
+                                    </th>
                                     <th className="py-4 px-6 text-xs font-bold uppercase tracking-wider text-primary/80 whitespace-nowrap text-right">Ações</th>
                                 </tr>
                             </thead>

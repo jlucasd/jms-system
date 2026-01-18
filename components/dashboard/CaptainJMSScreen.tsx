@@ -4,6 +4,13 @@ import { User, Rental, Cost } from '../../App';
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import ReactMarkdown from 'react-markdown';
 
+// Declaração para evitar erro de TS2580 se @types/node não estiver instalado
+declare const process: {
+  env: {
+    API_KEY: string;
+  };
+};
+
 interface CaptainJMSScreenProps {
     currentUser: User | null;
     onClose: () => void;

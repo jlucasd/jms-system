@@ -300,7 +300,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             case 'financialDashboard':
                 return <FinancialDashboardScreen costs={costs} />;
             case 'captainJMS':
-                return <CaptainJMSScreen currentUser={currentUser} onClose={() => setIsCaptainChatOpen(false)} dataContext={{ rentals, costs }} />;
+                return (
+                    <CaptainJMSScreen 
+                        currentUser={currentUser} 
+                        onClose={() => onNavigate('dashboard')} 
+                        dataContext={{ rentals, costs }} 
+                    />
+                );
             case 'users':
                 if (userPageView === 'list') {
                     return <UsersScreen 

@@ -15,6 +15,7 @@ Este sistema foi desenvolvido para facilitar a administração da JMS, permitind
 *   **Site desenvolvido por:** João Luccas Damiani
 *   **Prototipação:** [Stitch](https://stitch.withgoogle.com/)
 *   **Desenvolvido em:** [Google AI Studio](https://aistudio.google.com/)
+*   **Base de dadsos:** [Supabase](https://supabase.com/)
 *   **Site publicado em:** [Vercel](https://vercel.com/)
 
 ## Rode Localmente

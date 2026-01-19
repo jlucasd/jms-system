@@ -2,19 +2,28 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# JMS Admin
 
-This contains everything you need to run your app locally.
+Sistema de gestão de frota de jet skis, controle financeiro e operacional.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1NJ_c4CT6P4z2iChK8Rfm2_FhK36KaSlI
+## Sobre o Projeto
 
-## Run Locally
+Este sistema foi desenvolvido para facilitar a administração da JMS, permitindo o controle de locações, gestão financeira de custos e receitas, cadastro de frota e gerenciamento de equipe.
 
-**Prerequisites:**  Node.js
+## Créditos
+
+*   **Site desenvolvido por:** João Luccas Damiani
+*   **Prototipação:** [Stitch](https://stitch.withgoogle.com/)
+*   **Desenvolvido em:** [Google AI Studio](https://aistudio.google.com/)
+*   **Site publicado em:** [Vercel](https://vercel.com/)
+
+## Rode Localmente
+
+**Prerequisitos:**  Node.js
 
 
-1. Install dependencies:
+1. Instale as dependencias:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Coloque a `GEMINI_API_KEY` no [.env.local](.env.local) para sua API key do Gemini 
+3. Rode o app:
    `npm run dev`

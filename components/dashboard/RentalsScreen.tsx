@@ -14,6 +14,8 @@ interface RentalsScreenProps {
     currentUser: User | null;
 }
 
+const months = ['Todos', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
 const StatusBadge: React.FC<{ status: RentalStatus }> = ({ status }) => {
     const styles = {
         Pendente: 'bg-yellow-50 text-yellow-700 border-yellow-100',
@@ -61,6 +63,8 @@ const ClientAvatar: React.FC<{ initial: string }> = ({ initial }) => {
 const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNavigateToAddRental, onNavigateToEditRental, onDeleteRental, successMessage, setSuccessMessage, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
+    const [selectedMonth, setSelectedMonth] = useState('Todos');
+    const [selectedYear, setSelectedYear] = useState('Todos');
     const [selectedStatus, setSelectedStatus] = useState('Todos Status');
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -100,7 +104,19 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
     
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, selectedDate, selectedStatus]);
+    }, [searchTerm, selectedDate, selectedStatus, selectedMonth, selectedYear]);
+
+    // Extrai anos disponíveis das locações
+    const availableYears = useMemo(() => {
+        const years = new Set<string>();
+        rentals.forEach(rental => {
+            if (rental.date && rental.date.length >= 4) {
+                years.add(rental.date.substring(0, 4));
+            }
+        });
+        // Ordena decrescente
+        return ['Todos', ...Array.from(years).sort((a, b) => parseInt(b) - parseInt(a))];
+    }, [rentals]);
 
     const maskDate = (value: string) => {
         return value
@@ -126,9 +142,32 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
         let result = rentals.filter(rental => {
             const term = searchTerm.toLowerCase();
             const matchesSearch = rental.clientName.toLowerCase().includes(term) || rental.clientCpf.includes(term);
+            
+            // Filtro de Data Específica (Input Manual)
             const matchesDate = !filterDateValue || rental.date === filterDateValue;
+            
+            // Filtro de Status
             const matchesStatus = selectedStatus === 'Todos Status' || rental.status === selectedStatus;
-            return matchesSearch && matchesDate && matchesStatus;
+
+            // Filtro de Mês
+            let monthMatch = true;
+            if (selectedMonth !== 'Todos') {
+                if (rental.date) {
+                    const rentalMonth = parseInt(rental.date.split('-')[1], 10);
+                    const targetMonthIndex = months.indexOf(selectedMonth);
+                    monthMatch = rentalMonth === targetMonthIndex;
+                } else {
+                    monthMatch = false;
+                }
+            }
+
+            // Filtro de Ano
+            let yearMatch = true;
+            if (selectedYear !== 'Todos') {
+                yearMatch = rental.date?.startsWith(selectedYear) || false;
+            }
+
+            return matchesSearch && matchesDate && matchesStatus && monthMatch && yearMatch;
         });
 
         if (sortConfig !== null) {
@@ -155,7 +194,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
             });
         }
         return result;
-    }, [searchTerm, rentals, selectedDate, selectedStatus, sortConfig]);
+    }, [searchTerm, rentals, selectedDate, selectedStatus, selectedMonth, selectedYear, sortConfig]);
 
     const totalPages = Math.ceil(filteredRentals.length / itemsPerPage);
     const paginatedRentals = useMemo(() => {
@@ -287,17 +326,40 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
                             <div className="relative w-full sm:w-auto flex-1 md:flex-none">
                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
                                 <input 
-                                    className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary" 
+                                    className="w-full sm:w-56 pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary" 
                                     placeholder="Buscar por cliente, CPF..." 
                                     type="text"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
+
+                            {/* Dropdown de Ano */}
+                            <select 
+                                value={selectedYear} 
+                                onChange={e => setSelectedYear(e.target.value)} 
+                                className="w-full sm:w-auto bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer"
+                            >
+                                {availableYears.map(year => (
+                                    <option key={year} value={year}>{year === 'Todos' ? 'Ano: Todos' : `Ano: ${year}`}</option>
+                                ))}
+                            </select>
+
+                            {/* Dropdown de Mês */}
+                            <select 
+                                value={selectedMonth} 
+                                onChange={e => setSelectedMonth(e.target.value)} 
+                                className="w-full sm:w-auto bg-gray-50 border border-gray-200 rounded-lg text-sm px-3 py-2 text-gray-600 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer"
+                            >
+                                {months.map(month => (
+                                    <option key={month} value={month}>{month === 'Todos' ? 'Mês: Todos' : `Mês: ${month}`}</option>
+                                ))}
+                            </select>
+
                             <div className="relative w-full sm:w-auto flex-1 md:flex-none">
-                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">calendar_today</span>
+                                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-sm">calendar_today</span>
                                 <input 
-                                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary" 
+                                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary" 
                                     type="text"
                                     placeholder="dd/MM/yyyy"
                                     value={selectedDate}
@@ -305,9 +367,9 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
                                 />
                             </div>
                             <div className="relative w-full sm:w-auto flex-1 md:flex-none" ref={statusDropdownRef}>
-                                <button onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)} className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition whitespace-nowrap w-full justify-between sm:w-48">
-                                    <span className="material-symbols-outlined text-[20px] text-gray-500">receipt_long</span>
-                                    {selectedStatus}
+                                <button onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)} className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition whitespace-nowrap w-full justify-between sm:w-40">
+                                    <span className="material-symbols-outlined text-[18px] text-gray-500">receipt_long</span>
+                                    {selectedStatus === 'Todos Status' ? 'Status' : selectedStatus}
                                     <span className="material-symbols-outlined text-[16px] text-gray-400 ml-1">expand_more</span>
                                 </button>
                                 {isStatusDropdownOpen && (
@@ -319,7 +381,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
                                 )}
                             </div>
                         </div>
-                        <button onClick={onNavigateToAddRental} className="w-full lg:w-auto px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shrink-0">
+                        <button onClick={onNavigateToAddRental} className="w-full lg:w-auto px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-2 shrink-0">
                             <span className="material-symbols-outlined">add</span>
                             Nova Locação
                         </button>
@@ -395,6 +457,13 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
                                         </td>
                                     </tr>
                                 ))}
+                                {paginatedRentals.length === 0 && (
+                                    <tr>
+                                        <td colSpan={7} className="text-center py-8 text-gray-500">
+                                            Nenhuma locação encontrada com os filtros selecionados.
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                         </table>
                     </div>

@@ -72,7 +72,9 @@ export interface FleetItem {
     name: string;
     color: string;
     plate: string;
-    status: 'Disponível' | 'Manutenção' | 'Indisponível';
+    status: 'Disponível' | 'Manutenção' | 'Indisponível'; // Status Operacional
+    type: 'Jet Ski' | 'Carreta Rodoviária' | 'Outro'; // Tipo do bem
+    isActive: boolean; // Status Administrativo (Ativo/Inativo)
 }
 
 export interface PriceTable {
@@ -193,7 +195,9 @@ const App: React.FC = () => {
               name: item.name,
               color: item.color,
               plate: item.plate,
-              status: item.status
+              status: item.status,
+              type: item.type || 'Jet Ski',
+              isActive: item.is_active !== false // Default true if null/undefined
           })));
       }
 

@@ -68,8 +68,12 @@ const itemLabels: Record<string, string> = {
 const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
     const [view, setView] = useState<'list' | 'form'>('list');
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedDate, setSelectedDate] = useState('');
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     
+    // Estado de Ordenação
+    const [sortConfig, setSortConfig] = useState<{ key: keyof ChecklistItem; direction: 'asc' | 'desc' } | null>(null);
+
     // Modal de Exclusão
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<ChecklistItem | null>(null);
@@ -164,16 +168,84 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
             }
         }
     }, [formData.checkinItems, formData.checkoutItems, view]); 
-    // Removido statusCheckIn/Out das dependências para evitar loops, mas adicionado view para garantir execução no form
 
-    // Lógica de Filtro
+    // Lógica de Ordenação
+    const handleSort = (key: keyof ChecklistItem) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const renderSortIcon = (key: keyof ChecklistItem) => {
+        if (sortConfig?.key !== key) return <span className="material-symbols-outlined text-[16px] text-gray-300 opacity-0 group-hover:opacity-50">unfold_more</span>;
+        return <span className="material-symbols-outlined text-[16px] text-primary">{sortConfig.direction === 'asc' ? 'arrow_drop_up' : 'arrow_drop_down'}</span>;
+    };
+
+    // Lógica de Filtro e Ordenação
     const filteredChecklists = useMemo(() => {
-        return checklists.filter(item => 
-            item.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.jetSki.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [searchTerm, checklists]);
+        let result = checklists.filter(item => {
+            // Filtro por nome do cliente
+            const searchMatch = item.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+            // Filtro por data
+            const dateMatch = !selectedDate || item.date === selectedDate;
+
+            return searchMatch && dateMatch;
+        });
+
+        if (sortConfig !== null) {
+            result.sort((a, b) => {
+                const aValue = a[sortConfig.key];
+                const bValue = b[sortConfig.key];
+
+                if (aValue === null || aValue === undefined) return 1;
+                if (bValue === null || bValue === undefined) return -1;
+
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    return sortConfig.direction === 'asc' 
+                        ? aValue.localeCompare(bValue) 
+                        : bValue.localeCompare(aValue);
+                }
+                
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return result;
+    }, [searchTerm, selectedDate, checklists, sortConfig]);
+
+    // Lógica de Exportação
+    const handleExport = () => {
+        const headers = ["ID", "Cliente", "Email", "Jet Ski", "Data", "Status Check-in", "Status Check-out", "Observações"];
+        const csvContent = [
+            headers.join(','),
+            ...filteredChecklists.map(item => [
+                item.id,
+                `"${item.clientName}"`,
+                item.clientEmail,
+                `"${item.jetSki}"`,
+                item.date,
+                item.statusCheckIn,
+                item.statusCheckOut,
+                `"${item.observations.replace(/"/g, '""')}"`
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'checklists_export.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    };
 
     const getStatusStyle = (status: string) => {
         switch (status) {
@@ -691,22 +763,31 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="relative flex-1 max-w-md">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-                        <input 
-                            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
-                            placeholder="Buscar por cliente ou ID..." 
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                    <div className="flex items-center gap-4 flex-1">
+                        <div className="relative flex-1 max-w-sm">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                            <input 
+                                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" 
+                                placeholder="Buscar por cliente..." 
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="relative">
+                            <input 
+                                className="pl-4 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-gray-600 cursor-pointer" 
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                            />
+                        </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                            <span className="material-symbols-outlined text-[20px]">filter_list</span>
-                            Filtros
-                        </button>
-                        <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                        <button 
+                            onClick={handleExport}
+                            className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
                             <span className="material-symbols-outlined text-[20px]">download</span>
                             Exportar
                         </button>
@@ -723,11 +804,21 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-gray-50/50">
-                                <th className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100">Cliente</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100">Jet Ski</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100">Data</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100">Status Check-in</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100">Status Check-out</th>
+                                <th onClick={() => handleSort('clientName')} className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group">
+                                    <div className="flex items-center gap-1">Cliente {renderSortIcon('clientName')}</div>
+                                </th>
+                                <th onClick={() => handleSort('jetSki')} className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group">
+                                    <div className="flex items-center gap-1">Jet Ski {renderSortIcon('jetSki')}</div>
+                                </th>
+                                <th onClick={() => handleSort('date')} className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group">
+                                    <div className="flex items-center gap-1">Data {renderSortIcon('date')}</div>
+                                </th>
+                                <th onClick={() => handleSort('statusCheckIn')} className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group">
+                                    <div className="flex items-center gap-1">Status Check-in {renderSortIcon('statusCheckIn')}</div>
+                                </th>
+                                <th onClick={() => handleSort('statusCheckOut')} className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group">
+                                    <div className="flex items-center gap-1">Status Check-out {renderSortIcon('statusCheckOut')}</div>
+                                </th>
                                 <th className="px-6 py-4 text-xs font-bold text-[#58738d] uppercase tracking-wider border-b border-gray-100 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -787,14 +878,13 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
                     </table>
                 </div>
                 <div className="p-4 md:p-6 border-t border-gray-100 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Mostrando {filteredChecklists.length > 0 ? 1 : 0}-{Math.min(3, filteredChecklists.length)} de {filteredChecklists.length} checklists</span>
+                    <span className="text-sm text-gray-500">Mostrando {filteredChecklists.length > 0 ? 1 : 0}-{Math.min(filteredChecklists.length, filteredChecklists.length)} de {filteredChecklists.length} checklists</span>
                     <div className="flex items-center gap-2">
                         <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
                             <span className="material-symbols-outlined text-[20px]">chevron_left</span>
                         </button>
                         <button className="p-2 border border-primary bg-primary text-white rounded-lg text-sm font-bold w-10">1</button>
-                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium w-10">2</button>
-                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
                             <span className="material-symbols-outlined text-[20px]">chevron_right</span>
                         </button>
                     </div>

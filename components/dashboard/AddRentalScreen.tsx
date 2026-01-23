@@ -1,19 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
-import { Rental, RentalType, RentalStatus, RentalLocation } from '../../App';
+import { Rental, RentalType, RentalStatus, RentalLocation, PriceTable } from '../../App';
 
 interface AddRentalScreenProps {
     onCancel: () => void;
     onSave: (rental: Rental) => void;
     rentalToEdit: Rental | null;
     locations: RentalLocation[];
+    priceTable?: PriceTable;
 }
 
 const rentalTypes: RentalType[] = ['Meia Diária', 'Diária'];
 const paymentMethods: ('Pix' | 'Cartão' | 'Dinheiro')[] = ['Pix', 'Cartão', 'Dinheiro'];
 const statuses: RentalStatus[] = ['Pendente', 'Confirmado', 'Concluído', 'Concluído com Pendências'];
 
-const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, rentalToEdit, locations }) => {
+const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, rentalToEdit, locations, priceTable }) => {
     const isEditMode = !!rentalToEdit;
 
     const [clientName, setClientName] = useState('');
@@ -29,6 +30,7 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
     const [selectedStatus, setSelectedStatus] = useState<RentalStatus>('Pendente');
     const [value, setValue] = useState('');
 
+    // Efeito para carregar dados de edição ou padrões para novo cadastro
     useEffect(() => {
         if (isEditMode && rentalToEdit) {
             setClientName(rentalToEdit.clientName);
@@ -42,12 +44,31 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             setObservations(rentalToEdit.observations || '');
             setSelectedPaymentMethod(rentalToEdit.paymentMethod || 'Pix');
             setSelectedStatus(rentalToEdit.status);
+            // IMPORTANTE: Ao editar, usa o valor exato que estava salvo, não o da tabela.
             setValue(String(rentalToEdit.value));
-        } else if (locations.length > 0) {
-            // Default to first location if adding new
-            setLocation(locations[0].name);
+        } else {
+            // Se for novo, inicializa localização e valores padrão da tabela
+            if (locations.length > 0) {
+                setLocation(locations[0].name);
+            }
+            if (priceTable) {
+                setValue(String(priceTable.halfDay));
+            }
         }
-    }, [isEditMode, rentalToEdit, locations]);
+    }, [isEditMode, rentalToEdit, locations, priceTable]);
+
+    // Função para mudar o tipo e atualizar o preço apenas quando o usuário CLICAR
+    const handleTypeChange = (type: RentalType) => {
+        setSelectedRentalType(type);
+        
+        if (priceTable) {
+            if (type === 'Meia Diária') {
+                setValue(String(priceTable.halfDay));
+            } else if (type === 'Diária') {
+                setValue(String(priceTable.fullDay));
+            }
+        }
+    };
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
@@ -148,7 +169,7 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                             <label className="block text-sm font-bold text-gray-700 mb-3">Tipo de Locação</label>
                                             <div className="grid grid-cols-2 gap-4">
                                                 {rentalTypes.map(type => (
-                                                    <button type="button" key={type} onClick={() => setSelectedRentalType(type)} className={`border p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all ${selectedRentalType === type ? 'border-2 border-secondary bg-secondary/5 shadow-sm' : 'border-gray-200 hover:border-secondary bg-white hover:shadow-md group'}`}>
+                                                    <button type="button" key={type} onClick={() => handleTypeChange(type)} className={`border p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all ${selectedRentalType === type ? 'border-2 border-secondary bg-secondary/5 shadow-sm' : 'border-gray-200 hover:border-secondary bg-white hover:shadow-md group'}`}>
                                                         <span className={`material-symbols-outlined ${selectedRentalType === type ? 'text-secondary' : 'text-gray-400 group-hover:text-secondary'}`}>{type === 'Diária' ? 'calendar_month' : 'schedule'}</span>
                                                         <span className={`text-sm font-bold ${selectedRentalType === type ? 'text-primary' : 'text-gray-600 group-hover:text-primary'}`}>{type}</span>
                                                     </button>

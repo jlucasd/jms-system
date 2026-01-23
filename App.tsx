@@ -15,6 +15,7 @@ export type User = {
   fullName?: string;
   role?: string;
   imageUrl?: string | null;
+  status?: 'Ativo' | 'Inativo'; // Adicionado status
 };
 
 export type DashboardUser = {
@@ -101,6 +102,7 @@ const App: React.FC = () => {
   const [costs, setCosts] = useState<Cost[]>([]);
   const [locations, setLocations] = useState<RentalLocation[]>([]);
   const [fleet, setFleet] = useState<FleetItem[]>([]);
+  const [prices, setPrices] = useState<PriceTable>({ halfDay: 0, fullDay: 0, extraHour: 0 }); // Novo State Global
   
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [dashboardPage, setDashboardPage] = useState<DashboardPage>('dashboard');
@@ -159,13 +161,14 @@ const App: React.FC = () => {
       if (usersError) throw usersError;
       const formattedUsers = (usersData || []).map(mapUserFromDB);
       setDashboardUsers(formattedUsers);
-      // Mapeia para o formato simples de login
+      // Mapeia para o formato simples de login, INCLUINDO STATUS
       setLoginUsers(formattedUsers.map(u => ({ 
         email: u.email, 
         password: u.password, 
         fullName: u.name, 
         role: u.role, 
-        imageUrl: u.imageUrl 
+        imageUrl: u.imageUrl,
+        status: u.status
       })));
 
       // 2. Rentals
@@ -201,6 +204,17 @@ const App: React.FC = () => {
           })));
       }
 
+      // 6. Prices (Tabela de Preços)
+      const { data: priceData } = await supabase.from('price_table').select('*').eq('id', 1).single();
+      if (priceData) {
+          setPrices({
+              id: priceData.id,
+              halfDay: Number(priceData.half_day),
+              fullDay: Number(priceData.full_day),
+              extraHour: Number(priceData.extra_hour)
+          });
+      }
+
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       alert('Erro ao carregar dados do sistema.');
@@ -221,7 +235,8 @@ const App: React.FC = () => {
            password: u.password, 
            fullName: u.name,
            role: u.role,
-           imageUrl: u.imageUrl
+           imageUrl: u.imageUrl,
+           status: u.status
          })));
       }
     };
@@ -253,6 +268,10 @@ const App: React.FC = () => {
 
   const handleLoginSuccess = (user: User) => {
     const dashboardUser = dashboardUsers.find(du => du.email === user.email);
+    
+    // A verificação de status 'Inativo' foi movida para o LoginForm para mostrar a mensagem amarela.
+    // Aqui assumimos que se chegou até aqui, o usuário pode logar (ou é o primeiro login antes do sync completo)
+
     const fullUser: User = {
         ...user,
         role: dashboardUser?.role || 'Colaborador',
@@ -262,6 +281,9 @@ const App: React.FC = () => {
     
     setIsAuthenticated(true);
     setCurrentUser(fullUser);
+    
+    // Define mensagem de boas-vindas
+    setSuccessMessage(`Bem-vindo(a), ${fullUser.fullName || 'Tripulante'}!`);
 
     // Redirecionamento baseado no perfil
     const userRole = fullUser.role || '';
@@ -290,24 +312,32 @@ const App: React.FC = () => {
     // 1. Usuários
   const handleAddNewLoginUser = async (newUser: User) => {
     // Cadastro público (SignUp screen)
+    // Agora cadastra como 'Inativo' por padrão
     const { error } = await supabase.from('app_users').insert([{
       full_name: newUser.fullName,
       email: newUser.email,
       password: newUser.password,
       role: 'Colaborador', 
-      status: 'Ativo'
+      status: 'Inativo'
     }]);
 
     if (error) {
       alert('Erro ao criar usuário: ' + error.message);
     } else {
-      setSuccessMessage('Usuário cadastrado com sucesso!');
+      setSuccessMessage('Cadastro realizado! Aguarde a aprovação do seu acesso.');
       navigateToLogin();
       const { data } = await supabase.from('app_users').select('*');
       if(data) {
          const formatted = data.map(mapUserFromDB);
          setDashboardUsers(formatted);
-         setLoginUsers(formatted.map(u => ({ email: u.email, password: u.password, fullName: u.name, role: u.role, imageUrl: u.imageUrl })));
+         setLoginUsers(formatted.map(u => ({ 
+             email: u.email, 
+             password: u.password, 
+             fullName: u.name, 
+             role: u.role, 
+             imageUrl: u.imageUrl,
+             status: u.status // Inclui status no refresh
+         })));
       }
     }
   }
@@ -521,6 +551,11 @@ const App: React.FC = () => {
           setSuccessMessage('Local removido com sucesso!');
       }
   };
+
+  // 5. Price Table Handler
+  const handleUpdatePriceTable = (updatedPrices: PriceTable) => {
+      setPrices(updatedPrices);
+  };
   
   // Handler para redefinição de senha
   const handlePasswordReset = async () => {
@@ -528,7 +563,7 @@ const App: React.FC = () => {
       if(data) {
          const formatted = data.map(mapUserFromDB);
          setDashboardUsers(formatted);
-         setLoginUsers(formatted.map(u => ({ email: u.email, password: u.password, fullName: u.name, role: u.role, imageUrl: u.imageUrl })));
+         setLoginUsers(formatted.map(u => ({ email: u.email, password: u.password, fullName: u.name, role: u.role, imageUrl: u.imageUrl, status: u.status })));
       }
       setSuccessMessage('Senha redefinida com sucesso! Faça login.');
       navigateToLogin();
@@ -555,6 +590,7 @@ const App: React.FC = () => {
       costs={costs}
       locations={locations} 
       fleet={fleet} // Pass fleet info
+      prices={prices} // Pass price table
       activePage={dashboardPage}
       onNavigate={handleDashboardNavigation}
       onAddNewUser={handleAddNewDashboardUser}
@@ -569,6 +605,7 @@ const App: React.FC = () => {
       onAddNewLocation={handleAddNewLocation} 
       onUpdateLocation={handleUpdateLocation} 
       onDeleteLocation={handleDeleteLocation} 
+      onUpdatePriceTable={handleUpdatePriceTable}
       successMessage={successMessage}
       setSuccessMessage={setSuccessMessage}
       onLogout={handleLogout}

@@ -146,10 +146,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                         </a>
                     </div>
 
-                    <div className="pt-4 mt-4 border-t border-gray-100">
-                        <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Sistema</span>
-                        
-                        {hasFullAccess && (
+                    {/* Grupo Sistema - Apenas Gerente/Financeiro */}
+                    {hasFullAccess && (
+                        <div className="pt-4 mt-4 border-t border-gray-100">
+                            <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Sistema</span>
+                            
                             <a 
                                 href="#"
                                 onClick={(e) => { e.preventDefault(); onNavigate('users'); }}
@@ -158,17 +159,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                                 <span className={iconClasses(activePage === 'users')}>manage_accounts</span>
                                 Usuários
                             </a>
-                        )}
 
-                        <a 
-                            href="#"
-                            onClick={(e) => { e.preventDefault(); onNavigate('settings'); }}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${activePage === 'settings' ? activeClasses : inactiveClasses}`}
-                        >
-                            <span className={iconClasses(activePage === 'settings')}>settings</span>
-                            Configurações
-                        </a>
-                    </div>
+                            <a 
+                                href="#"
+                                onClick={(e) => { e.preventDefault(); onNavigate('settings'); }}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${activePage === 'settings' ? activeClasses : inactiveClasses}`}
+                            >
+                                <span className={iconClasses(activePage === 'settings')}>settings</span>
+                                Configurações
+                            </a>
+                        </div>
+                    )}
                 </nav>
 
                 <div className="p-4 border-t border-gray-100 text-xs text-center text-gray-400">

@@ -70,9 +70,12 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
     
     // Estado de Ordenação
     const [sortConfig, setSortConfig] = useState<{ key: keyof ChecklistItem; direction: 'asc' | 'desc' } | null>(null);
+
+    const itemsPerPage = 10;
 
     // Modal de Exclusão
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -145,6 +148,11 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
         }
     }, [successMessage]);
 
+    // Resetar paginação ao filtrar
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedDate]);
+
     // --- AUTO-UPDATE STATUS LOGIC ---
     useEffect(() => {
         if (view !== 'form') return;
@@ -216,6 +224,21 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
 
         return result;
     }, [searchTerm, selectedDate, checklists, sortConfig]);
+
+    // Paginação
+    const totalPages = Math.ceil(filteredChecklists.length / itemsPerPage);
+    const paginatedChecklists = useMemo(() => {
+        return filteredChecklists.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    }, [filteredChecklists, currentPage, itemsPerPage]);
+
+    const startIndex = (currentPage - 1) * itemsPerPage + 1;
+    const endIndex = Math.min(currentPage * itemsPerPage, filteredChecklists.length);
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
 
     // Lógica de Exportação
     const handleExport = () => {
@@ -823,7 +846,7 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {filteredChecklists.map((item, index) => {
+                            {paginatedChecklists.map((item, index) => {
                                 const checkInStyle = getStatusStyle(item.statusCheckIn);
                                 const checkOutStyle = getStatusStyle(item.statusCheckOut);
                                 
@@ -867,7 +890,7 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
                                     </tr>
                                 );
                             })}
-                            {filteredChecklists.length === 0 && (
+                            {paginatedChecklists.length === 0 && (
                                 <tr>
                                     <td colSpan={6} className="text-center py-8 text-gray-500">
                                         Nenhum checklist encontrado.
@@ -878,16 +901,22 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [] }) => {
                     </table>
                 </div>
                 <div className="p-4 md:p-6 border-t border-gray-100 flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Mostrando {filteredChecklists.length > 0 ? 1 : 0}-{Math.min(filteredChecklists.length, filteredChecklists.length)} de {filteredChecklists.length} checklists</span>
-                    <div className="flex items-center gap-2">
-                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
-                            <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-                        </button>
-                        <button className="p-2 border border-primary bg-primary text-white rounded-lg text-sm font-bold w-10">1</button>
-                        <button className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
-                            <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-                        </button>
-                    </div>
+                    <span className="text-sm text-gray-500">
+                        Mostrando <span className="font-bold text-gray-700">{filteredChecklists.length > 0 ? startIndex : 0}-{endIndex}</span> de <span className="font-bold text-gray-700">{filteredChecklists.length}</span> checklists
+                    </span>
+                    {totalPages > 1 && (
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <span className="material-symbols-outlined text-sm">chevron_left</span>
+                            </button>
+                            <span className="px-2 text-sm text-gray-600 font-medium">
+                                Página {currentPage} de {totalPages}
+                            </span>
+                            <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages} className="size-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <span className="material-symbols-outlined text-sm">chevron_right</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
             

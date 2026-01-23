@@ -17,6 +17,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   
   const mobileHeaderImageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuALIhoMq7jrCC11GuUIer1GD9-GsdpiYk3xqRbYMk5LMnFtZcolrLZ1-WXDps-pC8Nv_JzBbkWu0pEyrDQA4Zh5RQKpj4aFabFkMa3eXaXa3a9AEJ43N2r3Skn5IewnxBNvrY-3Zryq8lQrwCQUXc5qtg9UBG8oFhB-bA1X0ey64qtrVayw66pEhb7iA6zjLbgvw-VFX1ExfWjoI0xGLh3lDwJpVi2h5PGSA433fY94ebmFtAtASimbUpcSb2CVh41ho0ESFLGjfw";
 
@@ -39,8 +40,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
   const handleLogin = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setError(null);
+    setWarning(null);
+    
     const user = users.find(u => u.email === email && u.password === password);
     if (user) {
+      if (user.status === 'Inativo') {
+          setWarning('Seu acesso ainda está pendente de aprovação. Contate o administrador.');
+          return;
+      }
+
       // Lógica do Lembrar de mim
       if (rememberMe) {
           localStorage.setItem('jms_remembered_email', email);
@@ -86,6 +94,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ onNavigateToForgotPassword, onNav
                 <button onClick={() => setSuccessMessage(null)} className="text-emerald-800/70 hover:text-emerald-800">
                     <span className="material-symbols-outlined text-xl">close</span>
                 </button>
+            </div>
+          )}
+
+          {warning && (
+            <div 
+                className="bg-yellow-50 border-yellow-500 text-yellow-800 border-l-4 p-4 rounded-lg flex items-center gap-3 shadow-md mb-2"
+                role="alert"
+                style={{ animation: 'fade-in-up 0.5s ease-out' }}
+            >
+                <span className="material-symbols-outlined">lock_clock</span>
+                <p className="font-bold text-sm">{warning}</p>
             </div>
           )}
 

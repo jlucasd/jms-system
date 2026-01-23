@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo } from 'react';
 import Sidebar from './dashboard/Sidebar';
 import DashboardHeader from './dashboard/DashboardHeader';
@@ -15,10 +14,10 @@ import FinancialScreen from './dashboard/FinancialScreen';
 import AddCostScreen from './dashboard/AddCostScreen';
 import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
 import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
-import SettingsScreen from './dashboard/SettingsScreen';
 import ChecklistsScreen from './dashboard/ChecklistsScreen';
+import SettingsScreen from './dashboard/SettingsScreen';
 import UserMenu from './dashboard/UserMenu';
-import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem } from '../App';
+import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem, PriceTable } from '../App';
 
 interface DashboardScreenProps {
     currentUser: User | null;
@@ -27,6 +26,7 @@ interface DashboardScreenProps {
     costs: Cost[];
     locations: RentalLocation[];
     fleet: FleetItem[];
+    prices: PriceTable;
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
     onAddNewUser: (user: DashboardUser) => void;
@@ -41,15 +41,18 @@ interface DashboardScreenProps {
     onAddNewLocation: (name: string) => void;
     onUpdateLocation: (id: number, name: string) => void;
     onDeleteLocation: (id: number) => void;
+    onUpdatePriceTable: (prices: PriceTable) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
     onLogout: () => void;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
-    currentUser, users, rentals, costs, locations, fleet, activePage, onNavigate, onAddNewUser, onUpdateUser, onDeleteUser, 
-    onAddNewRental, onUpdateRental, onDeleteRental, onAddNewCost, onUpdateCost, onDeleteCost,
-    onAddNewLocation, onUpdateLocation, onDeleteLocation,
+    currentUser, users, rentals, costs, locations, fleet, prices, activePage, onNavigate, 
+    onAddNewUser, onUpdateUser, onDeleteUser, 
+    onAddNewRental, onUpdateRental, onDeleteRental, 
+    onAddNewCost, onUpdateCost, onDeleteCost,
+    onAddNewLocation, onUpdateLocation, onDeleteLocation, onUpdatePriceTable,
     successMessage, setSuccessMessage, onLogout 
 }) => {
     const [userPageView, setUserPageView] = useState<'list' | 'add' | 'edit'>('list');
@@ -60,11 +63,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     
-    // AI Chat State
-    const [isCaptainChatOpen, setIsCaptainChatOpen] = useState(false);
-    
     // Mobile Sidebar State
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+    // Captain JMS State
+    const [isCaptainChatOpen, setIsCaptainChatOpen] = useState(false);
     
     const dashboardContentRef = useRef<HTMLDivElement>(null);
 
@@ -75,15 +78,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
     const monthMap: { [key: string]: number } = { 'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3, 'Maio': 4, 'Junho': 5, 'Julho': 6, 'Agosto': 7, 'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11 };
 
-    // Use locations from prop for filter options instead of raw rental strings
     const availableLocations = useMemo(() => {
-        // Fallback to rental strings if locations prop is empty (to avoid empty filter)
-        if (locations.length > 0) {
-             return ['Todos os Locais', ...locations.map(l => l.name)];
-        }
-        const locationSet = new Set(rentals.map(r => r.location).filter(Boolean));
-        return ['Todos os Locais', ...Array.from(locationSet).sort()];
-    }, [locations, rentals]);
+        const rentalLocations = new Set(rentals.map(r => r.location).filter(Boolean));
+        // Also include configured locations
+        locations.forEach(l => rentalLocations.add(l.name));
+        return ['Todos os Locais', ...Array.from(rentalLocations).sort()];
+    }, [rentals, locations]);
 
     const dashboardStats = useMemo(() => {
         const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -302,13 +302,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             case 'financialDashboard':
                 return <FinancialDashboardScreen costs={costs} />;
             case 'captainJMS':
-                return (
-                    <CaptainJMSScreen 
-                        currentUser={currentUser} 
-                        onClose={() => onNavigate('dashboard')} 
-                        dataContext={{ rentals, costs }} 
-                    />
-                );
+                // Note: Captain JMS is now a floating widget, but if accessed via menu/route, we can show it full screen or just the widget.
+                // For now, we reuse the widget logic or redirect.
+                // Assuming we want to show just the screen if routed here explicitly.
+                return <CaptainJMSScreen currentUser={currentUser} onClose={() => onNavigate('dashboard')} dataContext={{ rentals, costs }} />;
             case 'users':
                 if (userPageView === 'list') {
                     return <UsersScreen 
@@ -335,9 +332,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         currentUser={currentUser}
                     />;
                 }
-                return <AddRentalScreen locations={locations} onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
-            case 'checklists':
-                return <ChecklistsScreen fleet={fleet} />;
+                return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} locations={locations} priceTable={prices} />;
             case 'financial':
                  if (financialPageView === 'list') {
                     return <FinancialScreen 
@@ -351,8 +346,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     />;
                 }
                 return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
+            case 'checklists':
+                return <ChecklistsScreen fleet={fleet} />;
             case 'settings':
-                return <SettingsScreen locations={locations} onAddLocation={onAddNewLocation} onUpdateLocation={onUpdateLocation} onDeleteLocation={onDeleteLocation} currentUser={currentUser} />;
+                return <SettingsScreen 
+                    locations={locations}
+                    onAddLocation={onAddNewLocation}
+                    onUpdateLocation={onUpdateLocation}
+                    onDeleteLocation={onDeleteLocation}
+                    currentUser={currentUser}
+                    prices={prices}
+                    onUpdatePriceTable={onUpdatePriceTable}
+                />;
             default:
                 return null;
         }
@@ -378,7 +383,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             />
 
             <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-light">
-                <header className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm shrink-0">
+                <header className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm shrink-0 relative z-30">
                     <div className="flex items-center gap-3">
                          <button 
                             onClick={() => setIsMobileSidebarOpen(true)}
@@ -389,7 +394,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     </div>
                     <UserMenu currentUser={currentUser} onLogout={onLogout} />
                 </header>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-0">
                     {renderContent()}
                 </div>
             </main>

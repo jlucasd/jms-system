@@ -10,9 +10,11 @@ interface SettingsScreenProps {
     onUpdateLocation?: (id: number, name: string) => void;
     onDeleteLocation?: (id: number) => void;
     currentUser: User | null;
+    prices?: PriceTable;
+    onUpdatePriceTable?: (prices: PriceTable) => void;
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLocation, onUpdateLocation, onDeleteLocation, currentUser }) => {
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLocation, onUpdateLocation, onDeleteLocation, currentUser, prices, onUpdatePriceTable }) => {
     const [activeTab, setActiveTab] = useState<'profile' | 'fleet' | 'prices' | 'locations'>('profile');
     const [isLoading, setIsLoading] = useState(false);
     
@@ -30,7 +32,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLo
     
     const [fleet, setFleet] = useState<FleetItem[]>([]);
     
-    const [prices, setPrices] = useState<PriceTable>({
+    // Local state for prices, synced with props
+    const [localPrices, setLocalPrices] = useState<PriceTable>({
         halfDay: 0,
         fullDay: 0,
         extraHour: 0
@@ -69,6 +72,13 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLo
     useEffect(() => {
         fetchSettingsData();
     }, []);
+
+    // Sync prices from props to local state
+    useEffect(() => {
+        if (prices) {
+            setLocalPrices(prices);
+        }
+    }, [prices]);
 
     // Auto-dismiss alerts
     useEffect(() => {
@@ -109,17 +119,10 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLo
                     isActive: item.is_active !== false // Default to true if null/undefined
                 })));
             }
+            
+            // Prices are now passed via props, no need to fetch here individually to avoid double fetching logic
+            // The App component handles the initial fetch of prices.
 
-            // 3. Prices (Assumes ID 1)
-            const { data: priceData } = await supabase.from('price_table').select('*').eq('id', 1).single();
-            if (priceData) {
-                setPrices({
-                    id: priceData.id,
-                    halfDay: Number(priceData.half_day),
-                    fullDay: Number(priceData.full_day),
-                    extraHour: Number(priceData.extra_hour)
-                });
-            }
         } catch (error) {
             console.error('Error fetching settings:', error);
         } finally {
@@ -163,9 +166,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLo
         setIsLoading(true);
         const payload = {
             id: 1, // Force ID 1
-            half_day: prices.halfDay,
-            full_day: prices.fullDay,
-            extra_hour: prices.extraHour
+            half_day: localPrices.halfDay,
+            full_day: localPrices.fullDay,
+            extra_hour: localPrices.extraHour
         };
 
         const { error } = await supabase.from('price_table').upsert(payload);
@@ -175,6 +178,9 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLo
             showError('Erro ao salvar tabela de preços: ' + error.message);
         } else {
             showSuccess('Tabela de preços atualizada com sucesso!');
+            if (onUpdatePriceTable) {
+                onUpdatePriceTable(localPrices);
+            }
         }
     };
 
@@ -516,24 +522,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLo
                             
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50/30 hover:bg-white hover:border-primary/30 transition-all">
-                                    <label className="text-sm font-bold text-gray-700">Meia Diária (4h)</label>
+                                    <label className="text-sm font-bold text-gray-700">Meia Diária</label>
                                     <div className="relative w-40">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                                        <input type="number" value={prices.halfDay} onChange={(e) => setPrices({...prices, halfDay: Number(e.target.value)})} className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-primary font-bold text-right" />
+                                        <input type="number" value={localPrices.halfDay} onChange={(e) => setLocalPrices({...localPrices, halfDay: Number(e.target.value)})} className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-primary font-bold text-right" />
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50/30 hover:bg-white hover:border-primary/30 transition-all">
-                                    <label className="text-sm font-bold text-gray-700">Diária Completa (8h)</label>
+                                    <label className="text-sm font-bold text-gray-700">Diária Completa</label>
                                     <div className="relative w-40">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                                        <input type="number" value={prices.fullDay} onChange={(e) => setPrices({...prices, fullDay: Number(e.target.value)})} className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-primary font-bold text-right" />
+                                        <input type="number" value={localPrices.fullDay} onChange={(e) => setLocalPrices({...localPrices, fullDay: Number(e.target.value)})} className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-primary font-bold text-right" />
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50/30 hover:bg-white hover:border-primary/30 transition-all">
                                     <label className="text-sm font-bold text-gray-700">Hora Extra</label>
                                     <div className="relative w-40">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">R$</span>
-                                        <input type="number" value={prices.extraHour} onChange={(e) => setPrices({...prices, extraHour: Number(e.target.value)})} className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-primary font-bold text-right" />
+                                        <input type="number" value={localPrices.extraHour} onChange={(e) => setLocalPrices({...localPrices, extraHour: Number(e.target.value)})} className="w-full pl-8 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none text-primary font-bold text-right" />
                                     </div>
                                 </div>
                             </div>

@@ -16,8 +16,9 @@ import AddCostScreen from './dashboard/AddCostScreen';
 import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
 import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
 import SettingsScreen from './dashboard/SettingsScreen';
+import ChecklistsScreen from './dashboard/ChecklistsScreen';
 import UserMenu from './dashboard/UserMenu';
-import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation } from '../App';
+import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem } from '../App';
 
 interface DashboardScreenProps {
     currentUser: User | null;
@@ -25,6 +26,7 @@ interface DashboardScreenProps {
     rentals: Rental[];
     costs: Cost[];
     locations: RentalLocation[];
+    fleet: FleetItem[];
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
     onAddNewUser: (user: DashboardUser) => void;
@@ -45,7 +47,7 @@ interface DashboardScreenProps {
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
-    currentUser, users, rentals, costs, locations, activePage, onNavigate, onAddNewUser, onUpdateUser, onDeleteUser, 
+    currentUser, users, rentals, costs, locations, fleet, activePage, onNavigate, onAddNewUser, onUpdateUser, onDeleteUser, 
     onAddNewRental, onUpdateRental, onDeleteRental, onAddNewCost, onUpdateCost, onDeleteCost,
     onAddNewLocation, onUpdateLocation, onDeleteLocation,
     successMessage, setSuccessMessage, onLogout 
@@ -334,6 +336,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     />;
                 }
                 return <AddRentalScreen locations={locations} onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
+            case 'checklists':
+                return <ChecklistsScreen fleet={fleet} />;
             case 'financial':
                  if (financialPageView === 'list') {
                     return <FinancialScreen 

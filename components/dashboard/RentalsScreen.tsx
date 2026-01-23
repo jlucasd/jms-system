@@ -17,19 +17,21 @@ interface RentalsScreenProps {
 const months = ['Todos', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 const StatusBadge: React.FC<{ status: RentalStatus }> = ({ status }) => {
-    const styles = {
-        Pendente: 'bg-yellow-50 text-yellow-700 border-yellow-100',
-        Confirmado: 'bg-green-50 text-green-700 border-green-100',
-        Concluído: 'bg-blue-50 text-blue-700 border-blue-100',
+    const styles: {[key in RentalStatus]: string} = {
+        'Pendente': 'bg-yellow-50 text-yellow-700 border-yellow-100',
+        'Confirmado': 'bg-green-50 text-green-700 border-green-100',
+        'Concluído': 'bg-blue-50 text-blue-700 border-blue-100',
+        'Concluído com Pendências': 'bg-red-50 text-red-700 border-red-100'
     };
-    const dotStyles = {
-        Pendente: 'bg-yellow-500',
-        Confirmado: 'bg-green-500',
-        Concluído: 'bg-blue-500',
+    const dotStyles: {[key in RentalStatus]: string} = {
+        'Pendente': 'bg-yellow-500',
+        'Confirmado': 'bg-green-500',
+        'Concluído': 'bg-blue-500',
+        'Concluído com Pendências': 'bg-red-500'
     }
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status]}`}>
-            <span className={`size-1.5 rounded-full ${dotStyles[status]}`}></span>
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${styles[status] || styles['Pendente']}`}>
+            <span className={`size-1.5 rounded-full ${dotStyles[status] || dotStyles['Pendente']}`}></span>
             {status}
         </span>
     );
@@ -78,7 +80,7 @@ const RentalsScreen: React.FC<RentalsScreenProps> = ({ rentals, locations, onNav
 
     const statusDropdownRef = useRef<HTMLDivElement>(null);
 
-    const statuses = ['Todos Status', 'Pendente', 'Confirmado', 'Concluído'];
+    const statuses = ['Todos Status', 'Pendente', 'Confirmado', 'Concluído', 'Concluído com Pendências'];
 
     // Permissão de Edição/Exclusão: Gerente ou Financeiro
     const canEdit = currentUser?.role?.includes('Gerente') || currentUser?.role?.includes('Financeiro');

@@ -8,7 +8,7 @@ import DashboardScreen from './components/DashboardScreen';
 import { supabase } from './lib/supabase';
 
 type Page = 'login' | 'forgotPassword' | 'resetPassword' | 'signUp';
-export type DashboardPage = 'dashboard' | 'financialDashboard' | 'users' | 'rentals' | 'clients' | 'financial' | 'settings' | 'captainJMS';
+export type DashboardPage = 'dashboard' | 'financialDashboard' | 'users' | 'rentals' | 'checklists' | 'clients' | 'financial' | 'settings' | 'captainJMS';
 export type User = { 
   email: string; 
   password?: string;
@@ -27,7 +27,7 @@ export type DashboardUser = {
   password?: string; // Adicionado para gerenciar criação
 };
 
-export type RentalStatus = 'Pendente' | 'Confirmado' | 'Concluído';
+export type RentalStatus = 'Pendente' | 'Confirmado' | 'Concluído' | 'Concluído com Pendências';
 export type RentalType = 'Meia Diária' | 'Diária' | 'Diária/Meia';
 
 export interface Rental {
@@ -98,6 +98,7 @@ const App: React.FC = () => {
   const [rentals, setRentals] = useState<Rental[]>([]);
   const [costs, setCosts] = useState<Cost[]>([]);
   const [locations, setLocations] = useState<RentalLocation[]>([]);
+  const [fleet, setFleet] = useState<FleetItem[]>([]);
   
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [dashboardPage, setDashboardPage] = useState<DashboardPage>('dashboard');
@@ -184,6 +185,18 @@ const App: React.FC = () => {
           setLocations(locationsData.map((l: any) => ({ id: l.id, name: l.name })));
       }
 
+      // 5. Fleet
+      const { data: fleetData, error: fleetError } = await supabase.from('fleet').select('*').order('id', { ascending: true });
+      if (!fleetError && fleetData) {
+          setFleet(fleetData.map((item: any) => ({
+              id: item.id,
+              name: item.name,
+              color: item.color,
+              plate: item.plate,
+              status: item.status
+          })));
+      }
+
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       alert('Erro ao carregar dados do sistema.');
@@ -245,6 +258,15 @@ const App: React.FC = () => {
     
     setIsAuthenticated(true);
     setCurrentUser(fullUser);
+
+    // Redirecionamento baseado no perfil
+    const userRole = fullUser.role || '';
+    // Se for Gerente ou Financeiro, vai para o Dashboard. Caso contrário (Colaborador), vai para Locações.
+    if (userRole.includes('Gerente') || userRole.includes('Financeiro')) {
+        setDashboardPage('dashboard');
+    } else {
+        setDashboardPage('rentals');
+    }
   }
 
   const handleLogout = () => {
@@ -527,7 +549,8 @@ const App: React.FC = () => {
       users={dashboardUsers}
       rentals={rentals}
       costs={costs}
-      locations={locations} // Pass locations
+      locations={locations} 
+      fleet={fleet} // Pass fleet info
       activePage={dashboardPage}
       onNavigate={handleDashboardNavigation}
       onAddNewUser={handleAddNewDashboardUser}
@@ -539,9 +562,9 @@ const App: React.FC = () => {
       onAddNewCost={handleAddNewCost}
       onUpdateCost={handleUpdateCost}
       onDeleteCost={handleDeleteCost}
-      onAddNewLocation={handleAddNewLocation} // Pass location handlers
-      onUpdateLocation={handleUpdateLocation} // Pass location handlers
-      onDeleteLocation={handleDeleteLocation} // Pass location handlers
+      onAddNewLocation={handleAddNewLocation} 
+      onUpdateLocation={handleUpdateLocation} 
+      onDeleteLocation={handleDeleteLocation} 
       successMessage={successMessage}
       setSuccessMessage={setSuccessMessage}
       onLogout={handleLogout}

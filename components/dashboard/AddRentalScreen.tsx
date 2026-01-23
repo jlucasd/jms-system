@@ -11,7 +11,7 @@ interface AddRentalScreenProps {
 
 const rentalTypes: RentalType[] = ['Meia Diária', 'Diária'];
 const paymentMethods: ('Pix' | 'Cartão' | 'Dinheiro')[] = ['Pix', 'Cartão', 'Dinheiro'];
-const statuses: RentalStatus[] = ['Pendente', 'Confirmado', 'Concluído'];
+const statuses: RentalStatus[] = ['Pendente', 'Confirmado', 'Concluído', 'Concluído com Pendências'];
 
 const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, rentalToEdit, locations }) => {
     const isEditMode = !!rentalToEdit;
@@ -157,7 +157,7 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="location">Local de Saída</label>
+                                            <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="location">Local de Navegação</label>
                                             <div className="relative">
                                                 <select 
                                                     value={location} 
@@ -241,11 +241,16 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                         </div>
                                         <h3 className="text-lg font-bold text-primary">Status da Locação</h3>
                                     </div>
-                                    <div className="bg-gray-200 p-1 rounded-lg flex mb-8">
+                                    <div className="bg-gray-200 p-1 rounded-lg flex flex-col gap-1 mb-8">
                                         {statuses.map(status => {
-                                            const statusColors: {[key in RentalStatus]: string} = { Pendente: 'bg-[#F59E0B]', Confirmado: 'bg-emerald-500', Concluído: 'bg-blue-500'};
+                                            const statusColors: {[key in RentalStatus]: string} = { 
+                                                'Pendente': 'bg-[#F59E0B]', 
+                                                'Confirmado': 'bg-emerald-500', 
+                                                'Concluído': 'bg-blue-500',
+                                                'Concluído com Pendências': 'bg-rose-500'
+                                            };
                                             return(
-                                                <button key={status} type="button" onClick={() => setSelectedStatus(status)} className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${selectedStatus === status ? `${statusColors[status]} text-white shadow-sm` : 'text-gray-500 hover:bg-gray-300/50'}`}>
+                                                <button key={status} type="button" onClick={() => setSelectedStatus(status)} className={`w-full py-2 rounded-md text-sm font-bold transition-all ${selectedStatus === status ? `${statusColors[status]} text-white shadow-sm` : 'text-gray-500 hover:bg-gray-300/50'}`}>
                                                     {status}
                                                 </button>
                                             );

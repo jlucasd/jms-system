@@ -129,6 +129,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
 
                         <a 
                             href="#"
+                            onClick={(e) => { e.preventDefault(); onNavigate('checklists'); }}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'checklists' ? activeClasses : inactiveClasses}`}
+                        >
+                            <span className={iconClasses(activePage === 'checklists')}>checklist</span>
+                            Checklists
+                        </a>
+
+                        <a 
+                            href="#"
                             onClick={(e) => { e.preventDefault(); onNavigate('financial'); }}
                             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'financial' ? activeClasses : inactiveClasses}`}
                         >

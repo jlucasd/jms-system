@@ -46,6 +46,20 @@ export interface Rental {
     observations?: string;
     paymentMethod?: 'Pix' | 'Cartão' | 'Dinheiro';
     value: number;
+    paymentDate1?: string; // 50% Entrada
+    paymentDate2?: string; // 50% Restante
+    commissionCheck?: boolean; // Flag Comissão
+    commissionValue?: number; // Valor Comissão
+}
+
+export interface Client {
+    id: number;
+    name: string;
+    phone: string;
+    cpf: string;
+    address: string;
+    cep: string;
+    chaNumber: string;
 }
 
 export interface Cost {
@@ -99,6 +113,7 @@ const App: React.FC = () => {
   const [loginUsers, setLoginUsers] = useState<User[]>([]);
   const [dashboardUsers, setDashboardUsers] = useState<DashboardUser[]>([]);
   const [rentals, setRentals] = useState<Rental[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [costs, setCosts] = useState<Cost[]>([]);
   const [locations, setLocations] = useState<RentalLocation[]>([]);
   const [fleet, setFleet] = useState<FleetItem[]>([]);
@@ -107,6 +122,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [dashboardPage, setDashboardPage] = useState<DashboardPage>('dashboard');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [backupSql, setBackupSql] = useState<string | null>(null);
   
   // State para fluxo de recuperação de senha
   const [resetEmail, setResetEmail] = useState<string | null>(null);
@@ -134,10 +150,24 @@ const App: React.FC = () => {
     startTime: r.start_time || '',
     endTime: r.end_time || '',
     status: r.status as RentalStatus,
-    location: (r.location || '').trim(), // Trim para evitar duplicatas no filtro
+    location: (r.location || '').trim(),
     observations: r.observations || '',
     paymentMethod: r.payment_method as any,
-    value: Number(r.value) || 0
+    value: Number(r.value) || 0,
+    paymentDate1: r.payment_date_1 || '',
+    paymentDate2: r.payment_date_2 || '',
+    commissionCheck: r.commission_check || false,
+    commissionValue: Number(r.commission_value) || 0
+  });
+
+  const mapClientFromDB = (c: any): Client => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone || '',
+      cpf: c.cpf || '',
+      address: c.address || '',
+      cep: c.cep || '',
+      chaNumber: c.cha_number || ''
   });
 
   const mapCostFromDB = (c: any): Cost => ({
@@ -215,6 +245,12 @@ const App: React.FC = () => {
           });
       }
 
+      // 7. Clients
+      const { data: clientsData, error: clientsError } = await supabase.from('clients').select('*').order('name', { ascending: true });
+      if (!clientsError && clientsData) {
+          setClients(clientsData.map(mapClientFromDB));
+      }
+
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       alert('Erro ao carregar dados do sistema.');
@@ -233,8 +269,8 @@ const App: React.FC = () => {
          setLoginUsers(formatted.map(u => ({ 
            email: u.email, 
            password: u.password, 
-           fullName: u.name,
-           role: u.role,
+           fullName: u.name, 
+           role: u.role, 
            imageUrl: u.imageUrl,
            status: u.status
          })));
@@ -300,11 +336,45 @@ const App: React.FC = () => {
     setCurrentUser(null);
     setCurrentPage('login');
     setDashboardPage('dashboard');
+    setSuccessMessage(null); // Limpa a mensagem de sucesso ao sair
   };
 
   const handleDashboardNavigation = (page: DashboardPage) => {
     setDashboardPage(page);
   }
+
+  // --- Backup Handler ---
+  const handleGenerateRentalsBackup = () => {
+      if (rentals.length === 0) {
+          alert("Nenhum dado em memória para gerar o script. Certifique-se de que os dados estão carregados na tela.");
+          return;
+      }
+
+      const safeString = (str: string | undefined | null) => str ? `'${str.replace(/'/g, "''")}'` : 'NULL';
+      const safeNumber = (num: number | undefined | null) => (num !== undefined && num !== null) ? num : 'NULL';
+      const safeBool = (val: boolean | undefined) => val === true ? 'TRUE' : 'FALSE';
+
+      let sql = "-- SCRIPT DE RECUPERAÇÃO DE LOCAÇÕES (Gerado via JMS Admin)\n";
+      sql += "-- Data de geração: " + new Date().toLocaleString() + "\n";
+      sql += "-- INSTRUÇÕES: Copie este conteúdo e execute no SQL Editor do Supabase.\n\n";
+      sql += "BEGIN;\n\n"; 
+      
+      // Opcional: Limpar tabela antes de inserir (comentado por segurança)
+      // sql += "-- DELETE FROM rentals;\n\n";
+
+      rentals.forEach(r => {
+          sql += `INSERT INTO rentals (client_name, client_cpf, client_phone, rental_date, rental_type, start_time, end_time, status, location, observations, payment_method, value, payment_date_1, payment_date_2, commission_check, commission_value)\n`;
+          sql += `VALUES (${safeString(r.clientName)}, ${safeString(r.clientCpf)}, ${safeString(r.clientPhone)}, ${safeString(r.date)}, ${safeString(r.rentalType)}, ${safeString(r.startTime)}, ${safeString(r.endTime)}, ${safeString(r.status)}, ${safeString(r.location)}, ${safeString(r.observations)}, ${safeString(r.paymentMethod)}, ${safeNumber(r.value)}, ${safeString(r.paymentDate1)}, ${safeString(r.paymentDate2)}, ${safeBool(r.commissionCheck)}, ${safeNumber(r.commissionValue)});\n\n`;
+      });
+
+      sql += "COMMIT;\n";
+      
+      setBackupSql(sql);
+  };
+
+  const handleCloseBackupModal = () => {
+      setBackupSql(null);
+  };
 
   // --- Handlers de Manipulação de Dados (Supabase) ---
 
@@ -411,7 +481,11 @@ const App: React.FC = () => {
       location: newRental.location,
       observations: newRental.observations,
       payment_method: newRental.paymentMethod,
-      value: newRental.value
+      value: newRental.value,
+      payment_date_1: newRental.paymentDate1 || null,
+      payment_date_2: newRental.paymentDate2 || null,
+      commission_check: newRental.commissionCheck || false,
+      commission_value: newRental.commissionValue || 0
     };
 
     const { data, error } = await supabase.from('rentals').insert([payload]).select();
@@ -439,7 +513,11 @@ const App: React.FC = () => {
       location: updatedRental.location,
       observations: updatedRental.observations,
       payment_method: updatedRental.paymentMethod,
-      value: updatedRental.value
+      value: updatedRental.value,
+      payment_date_1: updatedRental.paymentDate1 || null,
+      payment_date_2: updatedRental.paymentDate2 || null,
+      commission_check: updatedRental.commissionCheck || false,
+      commission_value: updatedRental.commissionValue || 0
     };
 
     const { error } = await supabase.from('rentals').update(payload).eq('id', updatedRental.id);
@@ -556,6 +634,55 @@ const App: React.FC = () => {
   const handleUpdatePriceTable = (updatedPrices: PriceTable) => {
       setPrices(updatedPrices);
   };
+
+  // 6. Clients Handlers
+  const handleAddNewClient = async (newClient: Client) => {
+    const payload = {
+      name: newClient.name,
+      phone: newClient.phone,
+      cpf: newClient.cpf,
+      address: newClient.address,
+      cep: newClient.cep,
+      cha_number: newClient.chaNumber
+    };
+
+    const { data, error } = await supabase.from('clients').insert([payload]).select();
+    if (error) {
+        alert('Erro ao cadastrar cliente: ' + error.message);
+    } else if (data) {
+        setClients(prev => [...prev, mapClientFromDB(data[0])].sort((a,b) => a.name.localeCompare(b.name)));
+        setSuccessMessage('Cliente cadastrado com sucesso!');
+    }
+  };
+
+  const handleUpdateClient = async (updatedClient: Client) => {
+    const payload = {
+        name: updatedClient.name,
+        phone: updatedClient.phone,
+        cpf: updatedClient.cpf,
+        address: updatedClient.address,
+        cep: updatedClient.cep,
+        cha_number: updatedClient.chaNumber
+    };
+
+    const { error } = await supabase.from('clients').update(payload).eq('id', updatedClient.id);
+    if(error) {
+        alert('Erro ao atualizar cliente: ' + error.message);
+    } else {
+        setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+        setSuccessMessage('Cliente atualizado com sucesso!');
+    }
+  };
+
+  const handleDeleteClient = async (clientId: number) => {
+      const { error } = await supabase.from('clients').delete().eq('id', clientId);
+      if(error) {
+          alert('Erro ao excluir cliente.');
+      } else {
+          setClients(prev => prev.filter(c => c.id !== clientId));
+          setSuccessMessage('Cliente excluído com sucesso!');
+      }
+  };
   
   // Handler para redefinição de senha
   const handlePasswordReset = async () => {
@@ -589,8 +716,9 @@ const App: React.FC = () => {
       rentals={rentals}
       costs={costs}
       locations={locations} 
-      fleet={fleet} // Pass fleet info
-      prices={prices} // Pass price table
+      fleet={fleet} 
+      prices={prices} 
+      clients={clients} 
       activePage={dashboardPage}
       onNavigate={handleDashboardNavigation}
       onAddNewUser={handleAddNewDashboardUser}
@@ -606,6 +734,12 @@ const App: React.FC = () => {
       onUpdateLocation={handleUpdateLocation} 
       onDeleteLocation={handleDeleteLocation} 
       onUpdatePriceTable={handleUpdatePriceTable}
+      onAddNewClient={handleAddNewClient}
+      onUpdateClient={handleUpdateClient}
+      onDeleteClient={handleDeleteClient}
+      onGenerateRentalsBackup={handleGenerateRentalsBackup} 
+      backupSql={backupSql}
+      onCloseBackupModal={handleCloseBackupModal}
       successMessage={successMessage}
       setSuccessMessage={setSuccessMessage}
       onLogout={handleLogout}

@@ -12,9 +12,10 @@ interface SettingsScreenProps {
     currentUser: User | null;
     prices?: PriceTable;
     onUpdatePriceTable?: (prices: PriceTable) => void;
+    onGenerateRentalsBackup?: () => void;
 }
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLocation, onUpdateLocation, onDeleteLocation, currentUser, prices, onUpdatePriceTable }) => {
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLocation, onUpdateLocation, onDeleteLocation, currentUser, prices, onUpdatePriceTable, onGenerateRentalsBackup }) => {
     const [activeTab, setActiveTab] = useState<'profile' | 'fleet' | 'prices' | 'locations'>('profile');
     const [isLoading, setIsLoading] = useState(false);
     
@@ -408,6 +409,27 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ locations = [], onAddLo
                                     Salvar Alterações
                                 </button>
                             </div>
+
+                            {/* EMERGENCY BACKUP BUTTON */}
+                            {canEdit && onGenerateRentalsBackup && (
+                                <div className="mt-12 p-6 bg-red-50 border border-red-100 rounded-xl">
+                                    <h3 className="text-lg font-bold text-red-800 flex items-center gap-2">
+                                        <span className="material-symbols-outlined">warning</span>
+                                        Área de Perigo (Recuperação de Dados)
+                                    </h3>
+                                    <p className="text-sm text-red-600 mt-2 mb-4">
+                                        Use este botão apenas se você deletou acidentalmente dados de locação e PRECISA gerar um script SQL baseado nos dados que ainda estão na memória do seu navegador. 
+                                        <b>Não atualize a página antes de clicar aqui.</b>
+                                    </p>
+                                    <button 
+                                        onClick={onGenerateRentalsBackup}
+                                        className="px-6 py-2.5 bg-red-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-red-700 transition-all flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined">database</span>
+                                        Gerar Backup de Locações (Console)
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 

@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Rental, RentalType, RentalStatus, RentalLocation, PriceTable } from '../../App';
+import React, { useState, useEffect, useRef } from 'react';
+import { Rental, RentalType, RentalStatus, RentalLocation, PriceTable, Client } from '../../App';
 
 interface AddRentalScreenProps {
     onCancel: () => void;
@@ -8,13 +8,15 @@ interface AddRentalScreenProps {
     rentalToEdit: Rental | null;
     locations: RentalLocation[];
     priceTable?: PriceTable;
+    clients?: Client[];
+    onAddClientClick?: () => void;
 }
 
 const rentalTypes: RentalType[] = ['Meia Diária', 'Diária'];
 const paymentMethods: ('Pix' | 'Cartão' | 'Dinheiro')[] = ['Pix', 'Cartão', 'Dinheiro'];
 const statuses: RentalStatus[] = ['Pendente', 'Confirmado', 'Concluído', 'Concluído com Pendências'];
 
-const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, rentalToEdit, locations, priceTable }) => {
+const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, rentalToEdit, locations, priceTable, clients = [], onAddClientClick }) => {
     const isEditMode = !!rentalToEdit;
 
     const [clientName, setClientName] = useState('');
@@ -29,6 +31,14 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'Pix' | 'Cartão' | 'Dinheiro'>('Pix');
     const [selectedStatus, setSelectedStatus] = useState<RentalStatus>('Pendente');
     const [value, setValue] = useState('');
+    const [paymentDate1, setPaymentDate1] = useState('');
+    const [paymentDate2, setPaymentDate2] = useState('');
+    const [isCommissionCheck, setIsCommissionCheck] = useState(false);
+    const [commissionValue, setCommissionValue] = useState('200');
+
+    // States for custom client dropdown
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Efeito para carregar dados de edição ou padrões para novo cadastro
     useEffect(() => {
@@ -46,6 +56,10 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             setSelectedStatus(rentalToEdit.status);
             // IMPORTANTE: Ao editar, usa o valor exato que estava salvo, não o da tabela.
             setValue(String(rentalToEdit.value));
+            setPaymentDate1(rentalToEdit.paymentDate1 || '');
+            setPaymentDate2(rentalToEdit.paymentDate2 || '');
+            setIsCommissionCheck(rentalToEdit.commissionCheck || false);
+            setCommissionValue(String(rentalToEdit.commissionValue || 200));
         } else {
             // Se for novo, inicializa localização e valores padrão da tabela
             if (locations.length > 0) {
@@ -56,6 +70,17 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             }
         }
     }, [isEditMode, rentalToEdit, locations, priceTable]);
+
+    // Fechar dropdown ao clicar fora
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsClientDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Função para mudar o tipo e atualizar o preço apenas quando o usuário CLICAR
     const handleTypeChange = (type: RentalType) => {
@@ -69,6 +94,17 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             }
         }
     };
+
+    const handleSelectClient = (client: Client) => {
+        setClientName(client.name);
+        setClientPhone(client.phone || '');
+        setClientCpf(client.cpf || '');
+        setIsClientDropdownOpen(false);
+    };
+
+    const filteredClients = clients.filter(c => 
+        c.name.toLowerCase().includes(clientName.toLowerCase())
+    );
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
@@ -87,6 +123,10 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
             paymentMethod: selectedPaymentMethod,
             status: selectedStatus,
             value: parseFloat(value) || 0,
+            paymentDate1,
+            paymentDate2,
+            commissionCheck: isCommissionCheck,
+            commissionValue: isCommissionCheck ? (parseFloat(commissionValue) || 0) : 0
         };
         onSave(rentalData);
     };
@@ -137,12 +177,61 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                         <h3 className="text-lg font-bold text-primary">Dados do Cliente</h3>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="col-span-2">
+                                        <div className="col-span-2 relative" ref={dropdownRef}>
                                             <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="clientName">Nome Completo</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">badge</span>
-                                                <input value={clientName} onChange={e => setClientName(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" id="clientName" placeholder="Ex: João da Silva" type="text"/>
+                                                <input 
+                                                    value={clientName} 
+                                                    onChange={(e) => {
+                                                        setClientName(e.target.value);
+                                                        setIsClientDropdownOpen(true);
+                                                    }}
+                                                    onFocus={() => setIsClientDropdownOpen(true)}
+                                                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder:text-gray-400 text-primary font-medium" 
+                                                    id="clientName" 
+                                                    placeholder="Busque ou digite o nome..." 
+                                                    type="text" 
+                                                    autoComplete="off"
+                                                />
+                                                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-lg">search</span>
                                             </div>
+                                            
+                                            {/* Custom Dropdown */}
+                                            {isClientDropdownOpen && (
+                                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar animate-[fade-in-up_0.1s_ease-out]">
+                                                    {filteredClients.map(client => (
+                                                        <div 
+                                                            key={client.id}
+                                                            onClick={() => handleSelectClient(client)}
+                                                            className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors"
+                                                        >
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="font-bold text-sm text-gray-800">{client.name}</span>
+                                                                <span className="text-xs text-gray-400 font-mono">{client.cpf}</span>
+                                                            </div>
+                                                            {client.phone && <div className="text-xs text-gray-500 mt-0.5">{client.phone}</div>}
+                                                        </div>
+                                                    ))}
+                                                    
+                                                    {filteredClients.length === 0 && (
+                                                        <div className="p-4 text-center text-gray-500 text-sm italic">
+                                                            Nenhum cliente encontrado com esse nome.
+                                                        </div>
+                                                    )}
+
+                                                    {onAddClientClick && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={onAddClientClick}
+                                                            className="w-full text-left px-4 py-3 bg-primary/5 hover:bg-primary/10 text-primary text-sm font-bold border-t border-primary/10 transition-colors flex items-center gap-2 sticky bottom-0"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">person_add</span>
+                                                            Cadastrar Novo Cliente
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="col-span-2 md:col-span-1">
                                             <label className="block text-sm font-bold text-gray-700 mb-2" htmlFor="clientPhone">Telefone / WhatsApp</label>
@@ -242,6 +331,34 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                                     type="number" />
                                             </div>
                                         </div>
+                                        
+                                        {/* Commission Field */}
+                                        <div className="bg-white border border-gray-200 rounded-lg p-3">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={isCommissionCheck}
+                                                        onChange={e => setIsCommissionCheck(e.target.checked)}
+                                                        className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                                    />
+                                                    <span className="text-sm font-bold text-gray-700">Comissão</span>
+                                                </label>
+                                            </div>
+                                            {isCommissionCheck && (
+                                                <div className="relative animate-[fade-in-up_0.2s_ease-out]">
+                                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">attach_money</span>
+                                                    <input 
+                                                        value={commissionValue}
+                                                        onChange={e => setCommissionValue(e.target.value)}
+                                                        className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-primary font-bold"
+                                                        type="number"
+                                                        placeholder="200.00"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <div>
                                             <p className="text-sm font-bold text-gray-700 mb-3">Método de Pagamento</p>
                                             <div className="flex flex-wrap gap-2">
@@ -251,6 +368,33 @@ const AddRentalScreen: React.FC<AddRentalScreenProps> = ({ onCancel, onSave, ren
                                                         {method}
                                                     </button>
                                                 ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="border-t border-gray-200 pt-4 mt-2">
+                                            <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-gray-500 text-[18px]">event</span>
+                                                Datas de Pagamento
+                                            </p>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 mb-1">50% Entrada</label>
+                                                    <input 
+                                                        value={paymentDate1} 
+                                                        onChange={e => setPaymentDate1(e.target.value)} 
+                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary font-medium" 
+                                                        type="date"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-bold text-gray-500 mb-1">50% Restante</label>
+                                                    <input 
+                                                        value={paymentDate2} 
+                                                        onChange={e => setPaymentDate2(e.target.value)} 
+                                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary font-medium" 
+                                                        type="date"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

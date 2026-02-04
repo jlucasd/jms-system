@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useMemo } from 'react';
 import Sidebar from './dashboard/Sidebar';
 import DashboardHeader from './dashboard/DashboardHeader';
@@ -17,7 +18,10 @@ import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
 import ChecklistsScreen from './dashboard/ChecklistsScreen';
 import SettingsScreen from './dashboard/SettingsScreen';
 import UserMenu from './dashboard/UserMenu';
-import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem, PriceTable } from '../App';
+import ClientsScreen from './dashboard/ClientsScreen';
+import AddClientScreen from './dashboard/AddClientScreen';
+import BackupModal from './dashboard/BackupModal';
+import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem, PriceTable, Client } from '../App';
 
 interface DashboardScreenProps {
     currentUser: User | null;
@@ -27,6 +31,7 @@ interface DashboardScreenProps {
     locations: RentalLocation[];
     fleet: FleetItem[];
     prices: PriceTable;
+    clients: Client[];
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
     onAddNewUser: (user: DashboardUser) => void;
@@ -42,17 +47,25 @@ interface DashboardScreenProps {
     onUpdateLocation: (id: number, name: string) => void;
     onDeleteLocation: (id: number) => void;
     onUpdatePriceTable: (prices: PriceTable) => void;
+    onAddNewClient: (client: Client) => void;
+    onUpdateClient: (client: Client) => void;
+    onDeleteClient: (clientId: number) => void;
+    onGenerateRentalsBackup: () => void;
+    backupSql: string | null;
+    onCloseBackupModal: () => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
     onLogout: () => void;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
-    currentUser, users, rentals, costs, locations, fleet, prices, activePage, onNavigate, 
+    currentUser, users, rentals, costs, locations, fleet, prices, clients, activePage, onNavigate, 
     onAddNewUser, onUpdateUser, onDeleteUser, 
     onAddNewRental, onUpdateRental, onDeleteRental, 
     onAddNewCost, onUpdateCost, onDeleteCost,
     onAddNewLocation, onUpdateLocation, onDeleteLocation, onUpdatePriceTable,
+    onAddNewClient, onUpdateClient, onDeleteClient, onGenerateRentalsBackup,
+    backupSql, onCloseBackupModal,
     successMessage, setSuccessMessage, onLogout 
 }) => {
     const [userPageView, setUserPageView] = useState<'list' | 'add' | 'edit'>('list');
@@ -61,6 +74,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [rentalToEdit, setRentalToEdit] = useState<Rental | null>(null);
     const [financialPageView, setFinancialPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
+    const [clientPageView, setClientPageView] = useState<'list' | 'add' | 'edit'>('list');
+    const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
+
     const [isExporting, setIsExporting] = useState(false);
     
     // Mobile Sidebar State
@@ -257,11 +273,45 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setCostToEdit(null);
     };
 
+    // --- Clients Handlers ---
+    const handleNavigateToAddClient = () => {
+        setClientToEdit(null);
+        setClientPageView('add');
+    };
+
+    // Função especial para redirecionar da tela de locação para a de cadastro de cliente
+    const handleRedirectToAddClient = () => {
+        onNavigate('clients');
+        setClientPageView('add');
+        setClientToEdit(null);
+    };
+
+    const handleNavigateToEditClient = (client: Client) => {
+        setClientToEdit(client);
+        setClientPageView('edit');
+    };
+
+    const handleCancelClientForm = () => {
+        setClientPageView('list');
+        setClientToEdit(null);
+    };
+
+    const handleSaveClient = (client: Client) => {
+        if (clientToEdit) {
+            onUpdateClient(client);
+        } else {
+            onAddNewClient(client);
+        }
+        setClientPageView('list');
+        setClientToEdit(null);
+    };
+
     const resetViews = (page: DashboardPage) => {
         onNavigate(page);
         setUserPageView('list');
         setRentalPageView('list');
         setFinancialPageView('list');
+        setClientPageView('list');
         setIsMobileSidebarOpen(false); // Close sidebar on navigation
     }
 
@@ -302,9 +352,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             case 'financialDashboard':
                 return <FinancialDashboardScreen costs={costs} />;
             case 'captainJMS':
-                // Note: Captain JMS is now a floating widget, but if accessed via menu/route, we can show it full screen or just the widget.
-                // For now, we reuse the widget logic or redirect.
-                // Assuming we want to show just the screen if routed here explicitly.
                 return <CaptainJMSScreen currentUser={currentUser} onClose={() => onNavigate('dashboard')} dataContext={{ rentals, costs }} />;
             case 'users':
                 if (userPageView === 'list') {
@@ -332,7 +379,28 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         currentUser={currentUser}
                     />;
                 }
-                return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} locations={locations} priceTable={prices} />;
+                return <AddRentalScreen 
+                    onCancel={handleCancelRentalForm} 
+                    onSave={handleSaveRental} 
+                    rentalToEdit={rentalToEdit} 
+                    locations={locations} 
+                    priceTable={prices} 
+                    clients={clients}
+                    onAddClientClick={handleRedirectToAddClient} 
+                />;
+            case 'clients':
+                if (clientPageView === 'list') {
+                    return <ClientsScreen 
+                        clients={clients}
+                        onNavigateToAddClient={handleNavigateToAddClient}
+                        onNavigateToEditClient={handleNavigateToEditClient}
+                        onDeleteClient={onDeleteClient}
+                        successMessage={successMessage}
+                        setSuccessMessage={setSuccessMessage}
+                        currentUser={currentUser}
+                    />
+                }
+                return <AddClientScreen onCancel={handleCancelClientForm} onSave={handleSaveClient} clientToEdit={clientToEdit} />;
             case 'financial':
                  if (financialPageView === 'list') {
                     return <FinancialScreen 
@@ -357,6 +425,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     currentUser={currentUser}
                     prices={prices}
                     onUpdatePriceTable={onUpdatePriceTable}
+                    onGenerateRentalsBackup={onGenerateRentalsBackup} 
                 />;
             default:
                 return null;
@@ -398,6 +467,15 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     {renderContent()}
                 </div>
             </main>
+
+            {/* Modal de Backup SQL */}
+            {backupSql && (
+                <BackupModal 
+                    isOpen={!!backupSql} 
+                    sql={backupSql} 
+                    onClose={onCloseBackupModal} 
+                />
+            )}
 
             {/* Captain JMS Floating Action Button */}
             <button 

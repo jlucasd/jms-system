@@ -415,7 +415,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 }
                 return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
             case 'checklists':
-                return <ChecklistsScreen fleet={fleet} />;
+                return <ChecklistsScreen fleet={fleet} clients={clients} />;
             case 'settings':
                 return <SettingsScreen 
                     locations={locations}

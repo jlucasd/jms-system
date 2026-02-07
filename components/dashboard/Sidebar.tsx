@@ -145,14 +145,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                             Checklists
                         </a>
 
-                        <a 
-                            href="#"
-                            onClick={(e) => { e.preventDefault(); onNavigate('financial'); }}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'financial' ? activeClasses : inactiveClasses}`}
-                        >
-                            <span className={iconClasses(activePage === 'financial')}>payments</span>
-                            Caixa / Custos
-                        </a>
+                        {/* Caixa / Custos - Apenas Gerente/Financeiro */}
+                        {hasFullAccess && (
+                            <a 
+                                href="#"
+                                onClick={(e) => { e.preventDefault(); onNavigate('financial'); }}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'financial' ? activeClasses : inactiveClasses}`}
+                            >
+                                <span className={iconClasses(activePage === 'financial')}>payments</span>
+                                Caixa / Custos
+                            </a>
+                        )}
                     </div>
 
                     {/* Grupo Sistema - Apenas Gerente/Financeiro */}

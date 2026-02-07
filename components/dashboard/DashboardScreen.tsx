@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useMemo } from 'react';
 import Sidebar from './dashboard/Sidebar';
 import DashboardHeader from './dashboard/DashboardHeader';
@@ -15,15 +14,23 @@ import FinancialScreen from './dashboard/FinancialScreen';
 import AddCostScreen from './dashboard/AddCostScreen';
 import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
 import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
+import ChecklistsScreen from './dashboard/ChecklistsScreen';
 import SettingsScreen from './dashboard/SettingsScreen';
 import UserMenu from './dashboard/UserMenu';
-import { User, DashboardPage, DashboardUser, Rental, Cost } from '../App';
+import ClientsScreen from './dashboard/ClientsScreen';
+import AddClientScreen from './dashboard/AddClientScreen';
+import BackupModal from './dashboard/BackupModal';
+import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem, PriceTable, Client } from '../../App';
 
 interface DashboardScreenProps {
     currentUser: User | null;
     users: DashboardUser[];
     rentals: Rental[];
     costs: Cost[];
+    locations: RentalLocation[];
+    fleet: FleetItem[];
+    prices: PriceTable;
+    clients: Client[];
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
     onAddNewUser: (user: DashboardUser) => void;
@@ -35,14 +42,29 @@ interface DashboardScreenProps {
     onAddNewCost: (cost: Cost) => void;
     onUpdateCost: (cost: Cost) => void;
     onDeleteCost: (costId: number) => void;
+    onAddNewLocation: (name: string) => void;
+    onUpdateLocation: (id: number, name: string) => void;
+    onDeleteLocation: (id: number) => void;
+    onUpdatePriceTable: (prices: PriceTable) => void;
+    onAddNewClient: (client: Client) => void;
+    onUpdateClient: (client: Client) => void;
+    onDeleteClient: (clientId: number) => void;
+    onGenerateRentalsBackup: () => void;
+    backupSql: string | null;
+    onCloseBackupModal: () => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
     onLogout: () => void;
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
-    currentUser, users, rentals, costs, activePage, onNavigate, onAddNewUser, onUpdateUser, onDeleteUser, 
-    onAddNewRental, onUpdateRental, onDeleteRental, onAddNewCost, onUpdateCost, onDeleteCost,
+    currentUser, users, rentals, costs, locations, fleet, prices, clients, activePage, onNavigate, 
+    onAddNewUser, onUpdateUser, onDeleteUser, 
+    onAddNewRental, onUpdateRental, onDeleteRental, 
+    onAddNewCost, onUpdateCost, onDeleteCost,
+    onAddNewLocation, onUpdateLocation, onDeleteLocation, onUpdatePriceTable,
+    onAddNewClient, onUpdateClient, onDeleteClient, onGenerateRentalsBackup,
+    backupSql, onCloseBackupModal,
     successMessage, setSuccessMessage, onLogout 
 }) => {
     const [userPageView, setUserPageView] = useState<'list' | 'add' | 'edit'>('list');
@@ -51,10 +73,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [rentalToEdit, setRentalToEdit] = useState<Rental | null>(null);
     const [financialPageView, setFinancialPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
+    const [clientPageView, setClientPageView] = useState<'list' | 'add' | 'edit'>('list');
+    const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
+
     const [isExporting, setIsExporting] = useState(false);
     
     // Mobile Sidebar State
     const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+    // Captain JMS State
+    const [isCaptainChatOpen, setIsCaptainChatOpen] = useState(false);
     
     const dashboardContentRef = useRef<HTMLDivElement>(null);
 
@@ -66,9 +94,11 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const monthMap: { [key: string]: number } = { 'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3, 'Maio': 4, 'Junho': 5, 'Julho': 6, 'Agosto': 7, 'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11 };
 
     const availableLocations = useMemo(() => {
-        const locations = new Set(rentals.map(r => r.location).filter(Boolean));
-        return ['Todos os Locais', ...Array.from(locations).sort()];
-    }, [rentals]);
+        const rentalLocations = new Set(rentals.map(r => r.location).filter(Boolean));
+        // Also include configured locations
+        locations.forEach(l => rentalLocations.add(l.name));
+        return ['Todos os Locais', ...Array.from(rentalLocations).sort()];
+    }, [rentals, locations]);
 
     const dashboardStats = useMemo(() => {
         const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -242,11 +272,45 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setCostToEdit(null);
     };
 
+    // --- Clients Handlers ---
+    const handleNavigateToAddClient = () => {
+        setClientToEdit(null);
+        setClientPageView('add');
+    };
+
+    // Função especial para redirecionar da tela de locação para a de cadastro de cliente
+    const handleRedirectToAddClient = () => {
+        onNavigate('clients');
+        setClientPageView('add');
+        setClientToEdit(null);
+    };
+
+    const handleNavigateToEditClient = (client: Client) => {
+        setClientToEdit(client);
+        setClientPageView('edit');
+    };
+
+    const handleCancelClientForm = () => {
+        setClientPageView('list');
+        setClientToEdit(null);
+    };
+
+    const handleSaveClient = (client: Client) => {
+        if (clientToEdit) {
+            onUpdateClient(client);
+        } else {
+            onAddNewClient(client);
+        }
+        setClientPageView('list');
+        setClientToEdit(null);
+    };
+
     const resetViews = (page: DashboardPage) => {
         onNavigate(page);
         setUserPageView('list');
         setRentalPageView('list');
         setFinancialPageView('list');
+        setClientPageView('list');
         setIsMobileSidebarOpen(false); // Close sidebar on navigation
     }
 
@@ -287,7 +351,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             case 'financialDashboard':
                 return <FinancialDashboardScreen costs={costs} />;
             case 'captainJMS':
-                return <CaptainJMSScreen currentUser={currentUser} />;
+                return <CaptainJMSScreen currentUser={currentUser} onClose={() => onNavigate('dashboard')} dataContext={{ rentals, costs }} />;
             case 'users':
                 if (userPageView === 'list') {
                     return <UsersScreen 
@@ -305,6 +369,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 if (rentalPageView === 'list') {
                     return <RentalsScreen 
                         rentals={rentals} 
+                        locations={locations}
                         onNavigateToAddRental={handleNavigateToAddRental} 
                         onNavigateToEditRental={handleNavigateToEditRental} 
                         onDeleteRental={onDeleteRental} 
@@ -313,7 +378,28 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         currentUser={currentUser}
                     />;
                 }
-                return <AddRentalScreen onCancel={handleCancelRentalForm} onSave={handleSaveRental} rentalToEdit={rentalToEdit} />;
+                return <AddRentalScreen 
+                    onCancel={handleCancelRentalForm} 
+                    onSave={handleSaveRental} 
+                    rentalToEdit={rentalToEdit} 
+                    locations={locations} 
+                    priceTable={prices} 
+                    clients={clients}
+                    onAddClientClick={handleRedirectToAddClient} 
+                />;
+            case 'clients':
+                if (clientPageView === 'list') {
+                    return <ClientsScreen 
+                        clients={clients}
+                        onNavigateToAddClient={handleNavigateToAddClient}
+                        onNavigateToEditClient={handleNavigateToEditClient}
+                        onDeleteClient={onDeleteClient}
+                        successMessage={successMessage}
+                        setSuccessMessage={setSuccessMessage}
+                        currentUser={currentUser}
+                    />
+                }
+                return <AddClientScreen onCancel={handleCancelClientForm} onSave={handleSaveClient} clientToEdit={clientToEdit} />;
             case 'financial':
                  if (financialPageView === 'list') {
                     return <FinancialScreen 
@@ -327,8 +413,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     />;
                 }
                 return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
+            case 'checklists':
+                return <ChecklistsScreen fleet={fleet} clients={clients} />;
             case 'settings':
-                return <SettingsScreen />;
+                return <SettingsScreen 
+                    locations={locations}
+                    onAddLocation={onAddNewLocation}
+                    onUpdateLocation={onUpdateLocation}
+                    onDeleteLocation={onDeleteLocation}
+                    currentUser={currentUser}
+                    prices={prices}
+                    onUpdatePriceTable={onUpdatePriceTable}
+                    onGenerateRentalsBackup={onGenerateRentalsBackup} 
+                />;
             default:
                 return null;
         }
@@ -354,7 +451,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             />
 
             <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-background-light">
-                <header className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm shrink-0">
+                <header className="flex items-center justify-between p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm shrink-0 relative z-30">
                     <div className="flex items-center gap-3">
                          <button 
                             onClick={() => setIsMobileSidebarOpen(true)}
@@ -362,14 +459,58 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         >
                             <span className="material-symbols-outlined">menu</span>
                         </button>
-                        {/* Show title on mobile only if needed, currently sidebar has title */}
                     </div>
                     <UserMenu currentUser={currentUser} onLogout={onLogout} />
                 </header>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-0">
                     {renderContent()}
                 </div>
             </main>
+
+            {/* Modal de Backup SQL */}
+            {backupSql && (
+                <BackupModal 
+                    isOpen={!!backupSql} 
+                    sql={backupSql} 
+                    onClose={onCloseBackupModal} 
+                />
+            )}
+
+            {/* Captain JMS Floating Action Button */}
+            <button 
+                onClick={() => setIsCaptainChatOpen(!isCaptainChatOpen)}
+                className={`
+                    fixed bottom-6 right-6 z-50 
+                    h-14 rounded-full shadow-xl 
+                    flex items-center justify-center gap-2 px-5
+                    transition-all duration-300 hover:scale-105 active:scale-95
+                    ${isCaptainChatOpen ? 'bg-red-500' : 'bg-primary'}
+                `}
+                title={isCaptainChatOpen ? "Fechar Chat" : "Falar com Capitão JMS"}
+            >
+                 <span className={`material-symbols-outlined text-white text-2xl transition-transform duration-300 ${isCaptainChatOpen ? 'rotate-90' : ''}`}>
+                    {isCaptainChatOpen ? 'close' : 'smart_toy'}
+                 </span>
+                 <span className="text-white font-bold whitespace-nowrap">
+                    {isCaptainChatOpen ? 'Fechar' : 'Capitão JMS'}
+                 </span>
+            </button>
+
+            {/* Captain JMS Chat Widget */}
+            {isCaptainChatOpen && (
+                <div 
+                    className="fixed bottom-24 right-4 md:right-6 w-[90vw] md:w-96 h-[600px] max-h-[70vh] z-40 animate-[fade-in-up_0.3s_ease-out]"
+                >
+                    <CaptainJMSScreen 
+                        currentUser={currentUser} 
+                        onClose={() => setIsCaptainChatOpen(false)}
+                        dataContext={{
+                            rentals: rentals,
+                            costs: costs
+                        }}
+                    />
+                </div>
+            )}
         </div>
     );
 };

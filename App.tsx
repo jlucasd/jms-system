@@ -320,13 +320,51 @@ const App: React.FC = () => {
   }
 
   const handleAddNewDashboardUser = async (u: DashboardUser) => {
-    const { data, error } = await supabase.from('app_users').insert([{ full_name: u.name, email: u.email, role: u.role, status: u.status, password: '123' }]).select();
-    if (!error && data) { setDashboardUsers(prev => [mapUserFromDB(data[0]), ...prev]); setSuccessMessage('Usuário salvo!'); }
+    const { data, error } = await supabase.from('app_users').insert([{ 
+        full_name: u.name, 
+        email: u.email, 
+        role: u.role, 
+        status: u.status, 
+        password: u.password || '123', // Usa a senha fornecida ou padrão '123'
+        image_url: u.imageUrl // Salva a imagem (Base64 string)
+    }]).select();
+    
+    if (!error && data) { 
+        setDashboardUsers(prev => [mapUserFromDB(data[0]), ...prev]); 
+        setSuccessMessage('Usuário salvo!'); 
+    } else if (error) {
+        console.error(error);
+        alert('Erro ao salvar usuário: ' + error.message);
+    }
   };
   
   const handleUpdateDashboardUser = async (u: DashboardUser) => {
-    const { error } = await supabase.from('app_users').update({ full_name: u.name, email: u.email, role: u.role, status: u.status }).eq('id', u.id);
-    if (!error) { setDashboardUsers(prev => prev.map(user => user.id === u.id ? u : user)); setSuccessMessage('Usuário atualizado!'); }
+    const payload: any = { 
+        full_name: u.name, 
+        email: u.email, 
+        role: u.role, 
+        status: u.status,
+        image_url: u.imageUrl // Atualiza a imagem
+    };
+    
+    if (u.password) {
+        payload.password = u.password;
+    }
+
+    const { error } = await supabase.from('app_users').update(payload).eq('id', u.id);
+    
+    if (!error) { 
+        setDashboardUsers(prev => prev.map(user => user.id === u.id ? u : user)); 
+        setSuccessMessage('Usuário atualizado!'); 
+        
+        // Se o usuário atualizou o próprio perfil, atualize o estado local
+        if (currentUser && currentUser.email === u.email) {
+            setCurrentUser(prev => prev ? { ...prev, imageUrl: u.imageUrl, fullName: u.name } : null);
+        }
+    } else {
+        console.error(error);
+        alert('Erro ao atualizar usuário: ' + error.message);
+    }
   };
 
   const handleDeleteDashboardUser = async (id: string) => {

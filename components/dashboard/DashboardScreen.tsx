@@ -278,11 +278,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setCostToEdit(null);
     };
 
-    const handleSaveCost = (cost: Cost) => {
-        if (costToEdit) {
-            onUpdateCost(cost);
+    const handleSaveCost = (costOrCosts: Cost | Cost[]) => {
+        if (Array.isArray(costOrCosts)) {
+            // Se for um array, significa que é um parcelamento novo.
+            // Itera e salva cada parcela.
+            // NOTA: Como onAddNewCost é uma prop, ela pode ser assíncrona.
+            // Em uma implementação ideal, isso deveria ser um bulk insert no App.tsx, 
+            // mas para minimizar mudanças, chamamos a função repetidamente.
+            costOrCosts.forEach(cost => onAddNewCost(cost));
         } else {
-            onAddNewCost(cost);
+            if (costToEdit) {
+                onUpdateCost(costOrCosts);
+            } else {
+                onAddNewCost(costOrCosts);
+            }
         }
         setFinancialPageView('list');
         setCostToEdit(null);

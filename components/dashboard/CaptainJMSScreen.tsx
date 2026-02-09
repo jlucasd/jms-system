@@ -30,7 +30,7 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 1,
-            text: `Olá **${currentUser?.fullName?.split(' ')[0] || 'tripulante'}**! ⚓\n\nEu sou o **Capitão JMS**. Tenho acesso aos dados atuais da frota. Como posso ajudar com os Jets ou finanças hoje?`,
+            text: `Olá **${currentUser?.fullName?.split(' ')[0] || 'tripulante'}**! ⚓\n\nEu sou o **Capitão JMS**. Tenho acesso aos dados da frota e às novas ferramentas operacionais. Como posso ajudar hoje?`,
             sender: 'ai',
             timestamp: new Date()
         }
@@ -55,13 +55,13 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
             const totalRevenue = dataContext.rentals.reduce((acc, r) => acc + r.value, 0);
             const totalCosts = dataContext.costs.reduce((acc, c) => acc + c.value, 0);
             financialDataString = `
+            DADOS FINANCEIROS (CONFIDENCIAL - APENAS PARA ${currentUser?.role}):
             - Faturamento Total Acumulado: R$ ${totalRevenue.toFixed(2)}
             - Custos Totais Acumulados: R$ ${totalCosts.toFixed(2)}
             `;
         } else {
             financialDataString = `
-            - Faturamento Total: [ACESSO RESTRITO - NÃO DIVULGAR]
-            - Custos Totais: [ACESSO RESTRITO - NÃO DIVULGAR]
+            DADOS FINANCEIROS: [ACESSO RESTRITO - O usuário atual NÃO TEM permissão para ver valores totais, faturamento ou custos. Se ele perguntar, diga que ele precisa falar com a gerência.]
             `;
         }
         
@@ -71,41 +71,49 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
             return `- ${r.date}: ${r.clientName} (${r.rentalType}) - Status: ${r.status}${valueString}`;
         }).join('\n');
 
+        const toolsDescription = `
+        FERRAMENTAS OPERACIONAIS E TELAS DO SISTEMA (Você pode explicar isso ao usuário):
+        1. **Checklists**: Tela para realizar vistorias digitais de saída (Check-in) e retorno (Check-out) dos Jets. Inclui conferência de coletes, documentos e itens de segurança.
+        2. **Texto Padrão**: Tela onde fica salvo o texto base para envio via WhatsApp aos clientes (regras, valores, horários). O usuário pode copiar ou editar lá.
+        3. **Links Úteis**: Tela com atalhos rápidos para Localizações (Maps da Marina/Lixão), Documentos Digitais (Jet/Carreta), Seguros e Link direto para Reserva no WhatsApp.
+        4. **Aplicativo**: Tela com informações sobre o app de rastreamento "GConnect" (Android/iOS), incluindo usuário e senha de acesso para monitorar a frota.
+        5. **Clientes**: Cadastro e gestão da base de clientes.
+        `;
+
         return `
-        DADOS ATUAIS DO SISTEMA:
+        CONTEXTO GERAL DO SISTEMA:
         - Total de Locações Registradas: ${totalRentals}
-        ${financialDataString}
         - Locações com Status 'Pendente': ${pendingRentals}
         
-        ÚLTIMAS 5 LOCAÇÕES:
+        ${financialDataString}
+        
+        ${toolsDescription}
+
+        ÚLTIMAS 5 LOCAÇÕES REGISTRADAS:
         ${recentRentals}
         `;
-    }, [dataContext, hasFinancialAccess]);
+    }, [dataContext, hasFinancialAccess, currentUser]);
 
     // Prompt do sistema aprimorado com dados reais e restrições de perfil
     const systemInstruction = `
         Você é o "Capitão JMS", um assistente de inteligência artificial especializado na gestão da empresa JMS (Aluguel de Jet Skis).
         
-        **SEU CONTEXTO DE DADOS (Use isso para responder perguntas):**
+        **SEU CONTEXTO DE DADOS E FERRAMENTAS (Use isso para responder):**
         ${contextSummary}
 
         **PERMISSÕES DO USUÁRIO:**
         O usuário atual é: ${currentUser?.fullName || 'Colaborador'}.
         Perfil de Acesso: ${currentUser?.role || 'Colaborador'}.
-        ${!hasFinancialAccess 
-            ? "**ATENÇÃO CRÍTICA:** Este usuário NÃO tem permissão para ver dados financeiros. Você NÃO sabe e NÃO deve discutir: Faturamento, Lucros, Custos, Preços de Contratos ou Comissões. Se perguntado sobre valores, diga polidamente que você não tem acesso a essas informações ou que o usuário precisa contatar a gerência." 
-            : "Este usuário tem acesso total aos dados financeiros e operacionais."
-        }
 
-        **Diretrizes de Personalidade:**
-        *   Seu tom deve ser profissional, prestativo e com leves toques náuticos (ex: "capitão", "navegar", "mar calmo").
-        *   Você fala estritamente sobre: Gestão de Jet Skis, Locações, Clientes, Manutenção e Finanças da JMS (se permitido).
-        *   Se o usuário perguntar sobre algo fora desse escopo (ex: política, futebol, receitas de bolo), responda educadamente que você só cuida da frota da JMS.
+        **Diretrizes de Resposta:**
+        1.  **Financeiro:** Se o usuário NÃO for Gerente ou Financeiro, recuse educadamente responder perguntas sobre Lucro, Faturamento Total ou Custos.
+        2.  **Operacional:** Você deve incentivar o uso das novas telas (Checklists, Links Úteis, etc) quando o assunto for pertinente. Ex: Se perguntarem sobre "vistoria", mencione a tela de Checklists. Se perguntarem sobre "onde fica a marina", mencione a tela de Links Úteis.
+        3.  **Personalidade:** Mantenha um tom profissional, prestativo e com leves toques náuticos (ex: "marujo", "capitão", "navegar"). Seja direto e útil.
+        4.  **Limites:** Fale apenas sobre a JMS. Ignore assuntos externos (política, futebol, etc).
 
-        **Diretrizes de Formatação:**
-        *   Use **negrito** para valores e nomes importantes.
-        *   Use listas com hífens ou asteriscos para enumerar itens.
-        *   Seja conciso.
+        **Formatação:**
+        *   Use **negrito** para destacar nomes de telas, valores permitidos e status.
+        *   Use listas para facilitar a leitura.
     `;
 
     const scrollToBottom = () => {
@@ -282,7 +290,7 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
                         type="text" 
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Pergunte ao Capitão..."
+                        placeholder="Pergunte sobre frota, checklists, links..."
                         className="flex-1 bg-gray-100 text-gray-800 text-sm placeholder:text-gray-500 py-2.5 px-4 rounded-full outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                         disabled={isLoading}
                     />

@@ -18,6 +18,7 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
     const [confirmPassword, setConfirmPassword] = useState('');
     // Role is now managed as an array of strings internally
     const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const availableRoles = ['Gerente', 'Colaborador', 'Financeiro'];
@@ -29,6 +30,7 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
             setStatus(userToEdit.status);
             // Split the role string into array, trim to ensure clean matches
             setSelectedRoles(userToEdit.role.split(',').map(r => r.trim()).filter(Boolean));
+            setImagePreview(userToEdit.imageUrl);
             setPassword('');
             setConfirmPassword('');
         }
@@ -40,6 +42,24 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
                 ? prev.filter(r => r !== role) 
                 : [...prev, role]
         );
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Verifica tamanho do arquivo (limite opcional de 2MB para evitar travar o banco com base64 muito grande)
+            if (file.size > 2 * 1024 * 1024) {
+                setError("A imagem deve ter no máximo 2MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+                setError(null);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSave = (e: React.FormEvent) => {
@@ -72,7 +92,8 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
             email,
             status,
             role: selectedRoles.join(', '), // Join back to string
-            imageUrl: isEditMode && userToEdit ? userToEdit.imageUrl : null,
+            imageUrl: imagePreview,
+            password: password || undefined // Only send password if changed/set
         };
         
         onSave(userData);
@@ -108,9 +129,24 @@ const AddUserScreen: React.FC<AddUserScreenProps> = ({ onCancel, onSave, userToE
                         )}
                         <div className="flex flex-col md:flex-row gap-6 items-start">
                             <div className="shrink-0">
-                                <div className="size-28 rounded-full bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300 text-gray-400 relative group cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors overflow-hidden">
-                                    <span className="material-symbols-outlined text-[40px] group-hover:scale-110 transition-transform">add_a_photo</span>
-                                    <input accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" type="file" />
+                                <div 
+                                    className={`size-28 rounded-full bg-gray-100 flex items-center justify-center border-2 border-dashed ${imagePreview ? 'border-primary' : 'border-gray-300'} text-gray-400 relative group cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all overflow-hidden bg-cover bg-center shadow-sm`}
+                                    style={imagePreview ? { backgroundImage: `url("${imagePreview}")` } : {}}
+                                >
+                                    {!imagePreview && (
+                                        <span className="material-symbols-outlined text-[40px] group-hover:scale-110 transition-transform">add_a_photo</span>
+                                    )}
+                                    {imagePreview && (
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                            <span className="material-symbols-outlined text-white text-[32px]">edit</span>
+                                        </div>
+                                    )}
+                                    <input 
+                                        accept="image/*" 
+                                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                                        type="file" 
+                                        onChange={handleImageChange}
+                                    />
                                 </div>
                                 <p className="text-xs text-center text-gray-500 mt-2 font-medium">Foto de Perfil</p>
                             </div>

@@ -43,7 +43,7 @@ const ImportantLinksScreen: React.FC = () => {
         {
             id: 4,
             title: 'Reservas JMS',
-            url: 'https://bit.ly/jmsalugueljetski',
+            url: 'https://api.whatsapp.com/send?phone=5548996344407&text=Ol%C3%A1,%20vim%20atrav%C3%A9s%20do%20site%20e%20gostaria%20de%20alugar%20o%20Jet%20Ski%20para%20me%20divertir.',
             icon: 'calendar_month',
             description: 'Link direto para agendamento e contato via WhatsApp.',
             category: 'Operacional',

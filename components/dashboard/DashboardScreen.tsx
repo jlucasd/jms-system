@@ -1,25 +1,29 @@
+
 import React, { useState, useRef, useMemo } from 'react';
-import Sidebar from './dashboard/Sidebar';
-import DashboardHeader from './dashboard/DashboardHeader';
-import DashboardFilters from './dashboard/DashboardFilters';
-import StatCard from './dashboard/StatCard';
-import RevenueChart from './dashboard/RevenueChart';
-import RentalsChart from './dashboard/RentalsChart';
-import MonthlyRevenueChart from './dashboard/MonthlyRevenueChart';
-import UsersScreen from './dashboard/UsersScreen';
-import AddUserScreen from './dashboard/AddUserScreen';
-import RentalsScreen from './dashboard/RentalsScreen';
-import AddRentalScreen from './dashboard/AddRentalScreen';
-import FinancialScreen from './dashboard/FinancialScreen';
-import AddCostScreen from './dashboard/AddCostScreen';
-import FinancialDashboardScreen from './dashboard/FinancialDashboardScreen';
-import CaptainJMSScreen from './dashboard/CaptainJMSScreen';
-import ChecklistsScreen from './dashboard/ChecklistsScreen';
-import SettingsScreen from './dashboard/SettingsScreen';
-import UserMenu from './dashboard/UserMenu';
-import ClientsScreen from './dashboard/ClientsScreen';
-import AddClientScreen from './dashboard/AddClientScreen';
-import BackupModal from './dashboard/BackupModal';
+import Sidebar from './Sidebar';
+import DashboardHeader from './DashboardHeader';
+import DashboardFilters from './DashboardFilters';
+import StatCard from './StatCard';
+import RevenueChart from './RevenueChart';
+import RentalsChart from './RentalsChart';
+import MonthlyRevenueChart from './MonthlyRevenueChart';
+import UsersScreen from './UsersScreen';
+import AddUserScreen from './AddUserScreen';
+import RentalsScreen from './RentalsScreen';
+import AddRentalScreen from './AddRentalScreen';
+import FinancialScreen from './FinancialScreen';
+import AddCostScreen from './AddCostScreen';
+import FinancialDashboardScreen from './FinancialDashboardScreen';
+import CaptainJMSScreen from './CaptainJMSScreen';
+import ChecklistsScreen from './ChecklistsScreen';
+import SettingsScreen from './SettingsScreen';
+import UserMenu from './UserMenu';
+import ClientsScreen from './ClientsScreen';
+import AddClientScreen from './AddClientScreen';
+import BackupModal from './BackupModal';
+import RentalTextScreen from './RentalTextScreen';
+import ImportantLinksScreen from './ImportantLinksScreen';
+import AppDownloadScreen from './AppDownloadScreen';
 import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem, PriceTable, Client } from '../../App';
 
 interface DashboardScreenProps {
@@ -31,6 +35,8 @@ interface DashboardScreenProps {
     fleet: FleetItem[];
     prices: PriceTable;
     clients: Client[];
+    rentalStandardText: string;
+    onUpdateRentalText: (text: string) => void;
     activePage: DashboardPage;
     onNavigate: (page: DashboardPage) => void;
     onAddNewUser: (user: DashboardUser) => void;
@@ -58,7 +64,7 @@ interface DashboardScreenProps {
 }
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ 
-    currentUser, users, rentals, costs, locations, fleet, prices, clients, activePage, onNavigate, 
+    currentUser, users, rentals, costs, locations, fleet, prices, clients, rentalStandardText, onUpdateRentalText, activePage, onNavigate, 
     onAddNewUser, onUpdateUser, onDeleteUser, 
     onAddNewRental, onUpdateRental, onDeleteRental, 
     onAddNewCost, onUpdateCost, onDeleteCost,
@@ -400,6 +406,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     />
                 }
                 return <AddClientScreen onCancel={handleCancelClientForm} onSave={handleSaveClient} clientToEdit={clientToEdit} />;
+            case 'rentalText':
+                return <RentalTextScreen text={rentalStandardText} onSave={onUpdateRentalText} />;
+            case 'importantLinks':
+                return <ImportantLinksScreen />;
+            case 'apps':
+                return <AppDownloadScreen />;
             case 'financial':
                  if (financialPageView === 'list') {
                     return <FinancialScreen 

@@ -118,6 +118,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                     <div className="pt-2">
                         <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">Operacional</span>
                         
+                        {/* 1. Locações */}
                         <a 
                             href="#"
                             onClick={(e) => { e.preventDefault(); onNavigate('rentals'); }}
@@ -127,6 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                             Locações
                         </a>
 
+                        {/* 2. Clientes */}
                         <a 
                             href="#"
                             onClick={(e) => { e.preventDefault(); onNavigate('clients'); }}
@@ -136,16 +138,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                             Clientes
                         </a>
 
-                        <a 
-                            href="#"
-                            onClick={(e) => { e.preventDefault(); onNavigate('checklists'); }}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'checklists' ? activeClasses : inactiveClasses}`}
-                        >
-                            <span className={iconClasses(activePage === 'checklists')}>checklist</span>
-                            Checklists
-                        </a>
-
-                        {/* Caixa / Custos - Apenas Gerente/Financeiro */}
+                        {/* 3. Caixa / Custos - Apenas Gerente/Financeiro */}
                         {hasFullAccess && (
                             <a 
                                 href="#"
@@ -156,6 +149,46 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                                 Caixa / Custos
                             </a>
                         )}
+
+                        {/* 4. Checklists */}
+                        <a 
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); onNavigate('checklists'); }}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'checklists' ? activeClasses : inactiveClasses}`}
+                        >
+                            <span className={iconClasses(activePage === 'checklists')}>checklist</span>
+                            Checklists
+                        </a>
+
+                        {/* 5. Texto Padrão */}
+                        <a 
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); onNavigate('rentalText'); }}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'rentalText' ? activeClasses : inactiveClasses}`}
+                        >
+                            <span className={iconClasses(activePage === 'rentalText')}>description</span>
+                            Texto Padrão
+                        </a>
+
+                        {/* 6. Links Úteis */}
+                        <a 
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); onNavigate('importantLinks'); }}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'importantLinks' ? activeClasses : inactiveClasses}`}
+                        >
+                            <span className={iconClasses(activePage === 'importantLinks')}>link</span>
+                            Links Úteis
+                        </a>
+
+                        {/* 7. Aplicativo */}
+                        <a 
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); onNavigate('apps'); }}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'apps' ? activeClasses : inactiveClasses}`}
+                        >
+                            <span className={iconClasses(activePage === 'apps')}>smartphone</span>
+                            Aplicativo - Rastreamento
+                        </a>
                     </div>
 
                     {/* Grupo Sistema - Apenas Gerente/Financeiro */}

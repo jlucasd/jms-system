@@ -15,7 +15,10 @@ const MonthlyRevenueChart: React.FC<{ year: string; month: string; location: str
         const revenuesByMonth = Array(12).fill(0);
         filteredRentals.forEach(r => {
             const rentalMonth = new Date(r.date).getUTCMonth();
-            revenuesByMonth[rentalMonth] += r.value;
+            // Net Revenue Calculation
+            const gross = r.value || 0;
+            const commission = (r.commissionCheck && r.commissionValue) ? r.commissionValue : 0;
+            revenuesByMonth[rentalMonth] += (gross - commission);
         });
 
         const maxRevenue = Math.max(...revenuesByMonth, 1); // Avoid division by zero
@@ -43,7 +46,7 @@ const MonthlyRevenueChart: React.FC<{ year: string; month: string; location: str
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-primary">Faturamento por Mês ({year === 'Todos' ? 'Geral' : year})</h3>
+                <h3 className="text-lg font-bold text-primary">Faturamento Líquido por Mês ({year === 'Todos' ? 'Geral' : year})</h3>
                 <div className="flex gap-4">
                     <span className="flex items-center gap-1 text-xs font-medium text-gray-500">
                         <span className="size-2 rounded-full bg-primary"></span> Mês

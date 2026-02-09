@@ -16,7 +16,10 @@ const RevenueChart: React.FC<{ year: string; location: string; rentals: Rental[]
         filteredRentals.forEach(rental => {
             const rentalYear = rental.date.substring(0, 4);
             if (revenueByYear.hasOwnProperty(rentalYear)) {
-                revenueByYear[rentalYear] += rental.value;
+                // Net Revenue Calculation: Rental Value - Commission
+                const gross = rental.value || 0;
+                const commission = (rental.commissionCheck && rental.commissionValue) ? rental.commissionValue : 0;
+                revenueByYear[rentalYear] += (gross - commission);
             }
         });
 
@@ -60,7 +63,7 @@ const RevenueChart: React.FC<{ year: string; location: string; rentals: Rental[]
     return (
         <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex flex-col h-full">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-primary">Faturamento por Ano</h3>
+                <h3 className="text-lg font-bold text-primary">Faturamento Líquido por Ano</h3>
                 <button className="text-gray-400 hover:text-primary"><span className="material-symbols-outlined">more_vert</span></button>
             </div>
             <div className="flex-1 flex gap-4 h-64 w-full">

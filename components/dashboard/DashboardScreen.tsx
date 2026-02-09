@@ -109,13 +109,21 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const dashboardStats = useMemo(() => {
         const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+        // Função auxiliar para calcular valor líquido (Valor - Comissão se houver)
+        const getNetValue = (r: Rental) => {
+            const gross = r.value || 0;
+            const commission = (r.commissionCheck && r.commissionValue) ? r.commissionValue : 0;
+            return gross - commission;
+        };
+
         const locationFilteredRentals = rentals.filter(r => selectedLocation === 'Todos os Locais' || r.location === selectedLocation);
 
         const yearFilteredRentals = selectedYear === 'Todos'
             ? locationFilteredRentals
             : locationFilteredRentals.filter(r => r.date.startsWith(selectedYear));
 
-        const annualRevenue = yearFilteredRentals.reduce((sum, r) => sum + r.value, 0);
+        // Cálculo Anual Líquido
+        const annualRevenue = yearFilteredRentals.reduce((sum, r) => sum + getNetValue(r), 0);
         const totalRentals = yearFilteredRentals.length;
 
         let annualTrend = 0;
@@ -123,7 +131,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             const prevYear = (parseInt(selectedYear, 10) - 1).toString();
             const prevYearRevenue = locationFilteredRentals
                 .filter(r => r.date.startsWith(prevYear))
-                .reduce((sum, r) => sum + r.value, 0);
+                .reduce((sum, r) => sum + getNetValue(r), 0);
             annualTrend = prevYearRevenue > 0 ? ((annualRevenue - prevYearRevenue) / prevYearRevenue) * 100 : (annualRevenue > 0 ? 100 : 0);
         }
 
@@ -134,7 +142,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         if (selectedMonth !== 'Todos') {
             const targetMonthIndex = monthMap[selectedMonth];
             const monthlyRentals = yearFilteredRentals.filter(r => new Date(r.date).getUTCMonth() === targetMonthIndex);
-            monthlyRevenue = monthlyRentals.reduce((sum, r) => sum + r.value, 0);
+            
+            // Cálculo Mensal Líquido
+            monthlyRevenue = monthlyRentals.reduce((sum, r) => sum + getNetValue(r), 0);
 
             if (selectedYear !== 'Todos') {
                 const prevMonthDate = new Date(parseInt(selectedYear, 10), targetMonthIndex - 1, 1);
@@ -142,7 +152,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     const rentalDate = new Date(r.date);
                     return rentalDate.getUTCFullYear() === prevMonthDate.getFullYear() && rentalDate.getUTCMonth() === prevMonthDate.getMonth();
                 });
-                const prevMonthRevenue = prevMonthRentals.reduce((sum, r) => sum + r.value, 0);
+                const prevMonthRevenue = prevMonthRentals.reduce((sum, r) => sum + getNetValue(r), 0);
                 monthlyTrend = prevMonthRevenue > 0 ? ((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 100 : (monthlyRevenue > 0 ? 100 : 0);
             }
         }
@@ -161,7 +171,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
             totalRentals: totalRentals.toLocaleString('pt-BR'),
             monthlyTrend: selectedMonth === 'Todos' ? '-' : getTrendString(monthlyTrend),
             annualTrend: selectedYear === 'Todos' ? 'Todos os períodos' : getTrendString(annualTrend),
-            yearTitle: selectedYear === 'Todos' ? 'Faturamento Total' : `Faturamento de ${selectedYear}`,
+            yearTitle: selectedYear === 'Todos' ? 'Faturamento Líquido Total' : `Faturamento Líquido de ${selectedYear}`,
             totalRentalsTitle: selectedYear === 'Todos' ? 'Total de Locações (Geral)' : `Total de Locações (${selectedYear})`,
             monthlyTrendDirection,
             annualTrendDirection,

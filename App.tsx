@@ -8,7 +8,7 @@ import DashboardScreen from './components/dashboard/DashboardScreen';
 import { supabase } from './lib/supabase';
 
 type Page = 'login' | 'forgotPassword' | 'resetPassword' | 'signUp';
-export type DashboardPage = 'dashboard' | 'financialDashboard' | 'users' | 'rentals' | 'checklists' | 'clients' | 'financial' | 'settings' | 'captainJMS' | 'rentalText' | 'importantLinks' | 'apps';
+export type DashboardPage = 'dashboard' | 'financialDashboard' | 'users' | 'rentals' | 'checklists' | 'clients' | 'financial' | 'settings' | 'captainJMS' | 'rentalText' | 'importantLinks' | 'apps' | 'weather';
 export type User = { 
   email: string; 
   password?: string;

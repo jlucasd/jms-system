@@ -24,6 +24,7 @@ import BackupModal from './BackupModal';
 import RentalTextScreen from './RentalTextScreen';
 import ImportantLinksScreen from './ImportantLinksScreen';
 import AppDownloadScreen from './AppDownloadScreen';
+import WeatherScreen from './WeatherScreen';
 import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem, PriceTable, Client } from '../../App';
 
 interface DashboardScreenProps {
@@ -431,6 +432,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 return <ImportantLinksScreen />;
             case 'apps':
                 return <AppDownloadScreen />;
+            case 'weather':
+                return <WeatherScreen locations={locations} />;
             case 'financial':
                  if (financialPageView === 'list') {
                     return <FinancialScreen 

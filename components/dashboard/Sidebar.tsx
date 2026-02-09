@@ -160,7 +160,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                             Checklists
                         </a>
 
-                        {/* 5. Texto Padrão */}
+                        {/* 5. Previsão do Tempo */}
+                        <a 
+                            href="#"
+                            onClick={(e) => { e.preventDefault(); onNavigate('weather'); }}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm mb-1 ${activePage === 'weather' ? activeClasses : inactiveClasses}`}
+                        >
+                            <span className={iconClasses(activePage === 'weather')}>weather_mix</span>
+                            Previsão do Tempo
+                        </a>
+
+                        {/* 6. Texto Padrão */}
                         <a 
                             href="#"
                             onClick={(e) => { e.preventDefault(); onNavigate('rentalText'); }}
@@ -170,7 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                             Texto Padrão
                         </a>
 
-                        {/* 6. Links Úteis */}
+                        {/* 7. Links Úteis */}
                         <a 
                             href="#"
                             onClick={(e) => { e.preventDefault(); onNavigate('importantLinks'); }}
@@ -180,7 +190,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage, onNavigate, currentUser, 
                             Links Úteis
                         </a>
 
-                        {/* 7. Aplicativo */}
+                        {/* 8. Aplicativo */}
                         <a 
                             href="#"
                             onClick={(e) => { e.preventDefault(); onNavigate('apps'); }}

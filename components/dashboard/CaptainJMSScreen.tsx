@@ -39,42 +39,68 @@ const CaptainJMSScreen: React.FC<CaptainJMSScreenProps> = ({ currentUser, onClos
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // Verifica permissão financeira
+    const hasFinancialAccess = useMemo(() => {
+        return currentUser?.role?.includes('Gerente') || currentUser?.role?.includes('Financeiro');
+    }, [currentUser]);
+
     // Preparar resumo dos dados para o contexto da IA
     const contextSummary = useMemo(() => {
         const totalRentals = dataContext.rentals.length;
-        const totalRevenue = dataContext.rentals.reduce((acc, r) => acc + r.value, 0);
-        const totalCosts = dataContext.costs.reduce((acc, c) => acc + c.value, 0);
         const pendingRentals = dataContext.rentals.filter(r => r.status === 'Pendente').length;
         
+        let financialDataString = '';
+
+        if (hasFinancialAccess) {
+            const totalRevenue = dataContext.rentals.reduce((acc, r) => acc + r.value, 0);
+            const totalCosts = dataContext.costs.reduce((acc, c) => acc + c.value, 0);
+            financialDataString = `
+            - Faturamento Total Acumulado: R$ ${totalRevenue.toFixed(2)}
+            - Custos Totais Acumulados: R$ ${totalCosts.toFixed(2)}
+            `;
+        } else {
+            financialDataString = `
+            - Faturamento Total: [ACESSO RESTRITO - NÃO DIVULGAR]
+            - Custos Totais: [ACESSO RESTRITO - NÃO DIVULGAR]
+            `;
+        }
+        
         // Pegar as 5 últimas locações para contexto recente
-        const recentRentals = dataContext.rentals.slice(0, 5).map(r => 
-            `- ${r.date}: ${r.clientName} (${r.rentalType}) - Status: ${r.status}`
-        ).join('\n');
+        const recentRentals = dataContext.rentals.slice(0, 5).map(r => {
+            const valueString = hasFinancialAccess ? ` - Valor: R$ ${r.value}` : '';
+            return `- ${r.date}: ${r.clientName} (${r.rentalType}) - Status: ${r.status}${valueString}`;
+        }).join('\n');
 
         return `
         DADOS ATUAIS DO SISTEMA:
         - Total de Locações Registradas: ${totalRentals}
-        - Faturamento Total Acumulado: R$ ${totalRevenue.toFixed(2)}
-        - Custos Totais Acumulados: R$ ${totalCosts.toFixed(2)}
+        ${financialDataString}
         - Locações com Status 'Pendente': ${pendingRentals}
         
         ÚLTIMAS 5 LOCAÇÕES:
         ${recentRentals}
         `;
-    }, [dataContext]);
+    }, [dataContext, hasFinancialAccess]);
 
-    // Prompt do sistema aprimorado com dados reais
+    // Prompt do sistema aprimorado com dados reais e restrições de perfil
     const systemInstruction = `
         Você é o "Capitão JMS", um assistente de inteligência artificial especializado na gestão da empresa JMS (Aluguel de Jet Skis).
         
         **SEU CONTEXTO DE DADOS (Use isso para responder perguntas):**
         ${contextSummary}
 
+        **PERMISSÕES DO USUÁRIO:**
+        O usuário atual é: ${currentUser?.fullName || 'Colaborador'}.
+        Perfil de Acesso: ${currentUser?.role || 'Colaborador'}.
+        ${!hasFinancialAccess 
+            ? "**ATENÇÃO CRÍTICA:** Este usuário NÃO tem permissão para ver dados financeiros. Você NÃO sabe e NÃO deve discutir: Faturamento, Lucros, Custos, Preços de Contratos ou Comissões. Se perguntado sobre valores, diga polidamente que você não tem acesso a essas informações ou que o usuário precisa contatar a gerência." 
+            : "Este usuário tem acesso total aos dados financeiros e operacionais."
+        }
+
         **Diretrizes de Personalidade:**
         *   Seu tom deve ser profissional, prestativo e com leves toques náuticos (ex: "capitão", "navegar", "mar calmo").
-        *   Você fala estritamente sobre: Gestão de Jet Skis, Locações, Clientes, Manutenção e Finanças da JMS.
+        *   Você fala estritamente sobre: Gestão de Jet Skis, Locações, Clientes, Manutenção e Finanças da JMS (se permitido).
         *   Se o usuário perguntar sobre algo fora desse escopo (ex: política, futebol, receitas de bolo), responda educadamente que você só cuida da frota da JMS.
-        *   O usuário atual é ${currentUser?.fullName || 'um membro da equipe'}.
 
         **Diretrizes de Formatação:**
         *   Use **negrito** para valores e nomes importantes.

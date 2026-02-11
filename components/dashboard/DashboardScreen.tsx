@@ -25,6 +25,7 @@ import RentalTextScreen from './RentalTextScreen';
 import ImportantLinksScreen from './ImportantLinksScreen';
 import AppDownloadScreen from './AppDownloadScreen';
 import WeatherScreen from './WeatherScreen';
+import Breadcrumbs, { BreadcrumbItem } from './Breadcrumbs';
 import { User, DashboardPage, DashboardUser, Rental, Cost, RentalLocation, FleetItem, PriceTable, Client } from '../../App';
 
 interface DashboardScreenProps {
@@ -281,11 +282,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
 
     const handleSaveCost = (costOrCosts: Cost | Cost[]) => {
         if (Array.isArray(costOrCosts)) {
-            // Se for um array, significa que é um parcelamento novo.
-            // Itera e salva cada parcela.
-            // NOTA: Como onAddNewCost é uma prop, ela pode ser assíncrona.
-            // Em uma implementação ideal, isso deveria ser um bulk insert no App.tsx, 
-            // mas para minimizar mudanças, chamamos a função repetidamente.
             costOrCosts.forEach(cost => onAddNewCost(cost));
         } else {
             if (costToEdit) {
@@ -304,7 +300,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setClientPageView('add');
     };
 
-    // Função especial para redirecionar da tela de locação para a de cadastro de cliente
     const handleRedirectToAddClient = () => {
         onNavigate('clients');
         setClientPageView('add');
@@ -339,6 +334,65 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setClientPageView('list');
         setIsMobileSidebarOpen(false); // Close sidebar on navigation
     }
+
+    // --- Breadcrumbs Calculation Logic ---
+    const getBreadcrumbs = (): BreadcrumbItem[] => {
+        // Base item: Home
+        const items: BreadcrumbItem[] = [
+            { label: 'Home', onClick: () => resetViews('dashboard') }
+        ];
+
+        switch (activePage) {
+            case 'dashboard':
+                // Already at home, no extra items needed unless we want "Dashboard" explicitly
+                break;
+            case 'financialDashboard':
+                items.push({ label: 'Financial' });
+                break;
+            case 'users':
+                items.push({ label: 'Team', onClick: () => setUserPageView('list') });
+                if (userPageView === 'add') items.push({ label: 'New User' });
+                if (userPageView === 'edit') items.push({ label: 'Edit User' });
+                break;
+            case 'rentals':
+                items.push({ label: 'Rentals', onClick: () => setRentalPageView('list') });
+                if (rentalPageView === 'add') items.push({ label: 'New Rental' });
+                if (rentalPageView === 'edit') items.push({ label: 'Edit Rental' });
+                break;
+            case 'clients':
+                items.push({ label: 'Clients', onClick: () => setClientPageView('list') });
+                if (clientPageView === 'add') items.push({ label: 'New Client' });
+                if (clientPageView === 'edit') items.push({ label: 'Edit Client' });
+                break;
+            case 'financial':
+                items.push({ label: 'Costs', onClick: () => setFinancialPageView('list') });
+                if (financialPageView === 'add') items.push({ label: 'New Cost' });
+                if (financialPageView === 'edit') items.push({ label: 'Edit Cost' });
+                break;
+            case 'checklists':
+                items.push({ label: 'Checklists' });
+                break;
+            case 'weather':
+                items.push({ label: 'Weather Forecast' });
+                break;
+            case 'rentalText':
+                items.push({ label: 'Standard Text' });
+                break;
+            case 'importantLinks':
+                items.push({ label: 'Useful Links' });
+                break;
+            case 'apps':
+                items.push({ label: 'Mobile App' });
+                break;
+            case 'settings':
+                items.push({ label: 'Settings' });
+                break;
+            case 'captainJMS':
+                items.push({ label: 'Captain JMS' });
+                break;
+        }
+        return items;
+    };
 
     const renderContent = () => {
         switch (activePage) {
@@ -496,6 +550,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                     </div>
                     <UserMenu currentUser={currentUser} onLogout={onLogout} />
                 </header>
+                
+                {/* Breadcrumbs Section */}
+                <div className="w-full">
+                    <Breadcrumbs items={getBreadcrumbs()} />
+                </div>
+
                 <div className="flex-1 overflow-y-auto custom-scrollbar pb-24 md:pb-0">
                     {renderContent()}
                 </div>

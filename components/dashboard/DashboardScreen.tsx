@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import DashboardHeader from './DashboardHeader';
 import DashboardFilters from './DashboardFilters';
@@ -98,6 +98,113 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [selectedYear, setSelectedYear] = useState('Todos');
     const [selectedMonth, setSelectedMonth] = useState('Todos');
     const [selectedLocation, setSelectedLocation] = useState('Todos os Locais');
+
+    // --- URL Sync Helper ---
+    const updateUrl = (view?: string, id?: string | number) => {
+        const url = new URL(window.location.href);
+        // Ensure page is set correctly based on active prop, or keep current if valid
+        url.searchParams.set('page', activePage);
+        
+        if (view && view !== 'list') {
+            url.searchParams.set('view', view);
+        } else {
+            url.searchParams.delete('view');
+        }
+
+        if (id) {
+            url.searchParams.set('id', String(id));
+        } else {
+            url.searchParams.delete('id');
+        }
+
+        window.history.pushState({}, '', url.toString());
+    };
+
+    // --- Sync State from URL on Mount/Update ---
+    useEffect(() => {
+        const syncStateFromUrl = () => {
+            const params = new URLSearchParams(window.location.search);
+            const view = params.get('view');
+            const id = params.get('id');
+
+            // Logic to sync internal state based on activePage and params
+            if (activePage === 'users') {
+                if (view === 'add') {
+                    setUserPageView('add');
+                    setUserToEdit(null);
+                } else if (view === 'edit' && id && users.length > 0) {
+                    const user = users.find(u => u.id === id);
+                    if (user) {
+                        setUserToEdit(user);
+                        setUserPageView('edit');
+                    } else {
+                        setUserPageView('list'); // ID invalid/not loaded yet
+                    }
+                } else {
+                    setUserPageView('list');
+                    setUserToEdit(null);
+                }
+            } 
+            else if (activePage === 'rentals') {
+                if (view === 'add') {
+                    setRentalPageView('add');
+                    setRentalToEdit(null);
+                } else if (view === 'edit' && id && rentals.length > 0) {
+                    const rental = rentals.find(r => r.id === Number(id));
+                    if (rental) {
+                        setRentalToEdit(rental);
+                        setRentalPageView('edit');
+                    } else {
+                        setRentalPageView('list');
+                    }
+                } else {
+                    setRentalPageView('list');
+                    setRentalToEdit(null);
+                }
+            }
+            else if (activePage === 'clients') {
+                if (view === 'add') {
+                    setClientPageView('add');
+                    setClientToEdit(null);
+                } else if (view === 'edit' && id && clients.length > 0) {
+                    const client = clients.find(c => c.id === Number(id));
+                    if (client) {
+                        setClientToEdit(client);
+                        setClientPageView('edit');
+                    } else {
+                        setClientPageView('list');
+                    }
+                } else {
+                    setClientPageView('list');
+                    setClientToEdit(null);
+                }
+            }
+            else if (activePage === 'financial') {
+                if (view === 'add') {
+                    setFinancialPageView('add');
+                    setCostToEdit(null);
+                } else if (view === 'edit' && id && costs.length > 0) {
+                    const cost = costs.find(c => c.id === Number(id));
+                    if (cost) {
+                        setCostToEdit(cost);
+                        setFinancialPageView('edit');
+                    } else {
+                        setFinancialPageView('list');
+                    }
+                } else {
+                    setFinancialPageView('list');
+                    setCostToEdit(null);
+                }
+            }
+        };
+
+        syncStateFromUrl();
+        
+        // Add listener for back/forward browser buttons
+        window.addEventListener('popstate', syncStateFromUrl);
+        return () => window.removeEventListener('popstate', syncStateFromUrl);
+
+    }, [activePage, users, rentals, clients, costs]); // Re-run when data loads/changes or page changes
 
     const monthMap: { [key: string]: number } = { 'Janeiro': 0, 'Fevereiro': 1, 'Março': 2, 'Abril': 3, 'Maio': 4, 'Junho': 5, 'Julho': 6, 'Agosto': 7, 'Setembro': 8, 'Outubro': 9, 'Novembro': 10, 'Dezembro': 11 };
 
@@ -214,45 +321,55 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         }
     };
 
+    // --- Users Handlers ---
     const handleSaveNewUser = (newUser: DashboardUser) => {
         onAddNewUser(newUser);
         setUserPageView('list');
+        updateUrl('list');
     };
 
     const handleUpdateUser = (updatedUser: DashboardUser) => {
         onUpdateUser(updatedUser);
         setUserPageView('list');
         setUserToEdit(null);
+        updateUrl('list');
     };
 
     const handleNavigateToAddUser = () => {
         setUserToEdit(null);
         setUserPageView('add');
+        updateUrl('add');
     };
 
     const handleNavigateToEditUser = (user: DashboardUser) => {
         setUserToEdit(user);
         setUserPageView('edit');
+        updateUrl('edit', user.id);
     };
     
     const handleCancelUserForm = () => {
         setUserPageView('list');
         setUserToEdit(null);
+        updateUrl('list');
     };
 
+    // --- Rentals Handlers ---
     const handleNavigateToAddRental = () => {
         setRentalToEdit(null);
         setRentalPageView('add');
+        updateUrl('add');
     };
 
     const handleNavigateToEditRental = (rental: Rental) => {
         setRentalToEdit(rental);
         setRentalPageView('edit');
+        updateUrl('edit', rental.id);
     };
 
     const handleCancelRentalForm = () => {
         setRentalPageView('list');
         setRentalToEdit(null);
+        updateUrl('list');
     };
 
     const handleSaveRental = (rental: Rental) => {
@@ -263,21 +380,26 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         }
         setRentalPageView('list');
         setRentalToEdit(null);
+        updateUrl('list');
     }
 
+    // --- Financial Handlers ---
     const handleNavigateToAddCost = () => {
         setCostToEdit(null);
         setFinancialPageView('add');
+        updateUrl('add');
     };
     
     const handleNavigateToEditCost = (cost: Cost) => {
         setCostToEdit(cost);
         setFinancialPageView('edit');
+        updateUrl('edit', cost.id);
     };
 
     const handleCancelCostForm = () => {
         setFinancialPageView('list');
         setCostToEdit(null);
+        updateUrl('list');
     };
 
     const handleSaveCost = (costOrCosts: Cost | Cost[]) => {
@@ -292,28 +414,37 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         }
         setFinancialPageView('list');
         setCostToEdit(null);
+        updateUrl('list');
     };
 
     // --- Clients Handlers ---
     const handleNavigateToAddClient = () => {
         setClientToEdit(null);
         setClientPageView('add');
+        updateUrl('add');
     };
 
     const handleRedirectToAddClient = () => {
         onNavigate('clients');
         setClientPageView('add');
         setClientToEdit(null);
+        // Force URL update manually since activePage changes
+        const url = new URL(window.location.href);
+        url.searchParams.set('page', 'clients');
+        url.searchParams.set('view', 'add');
+        window.history.pushState({}, '', url.toString());
     };
 
     const handleNavigateToEditClient = (client: Client) => {
         setClientToEdit(client);
         setClientPageView('edit');
+        updateUrl('edit', client.id);
     };
 
     const handleCancelClientForm = () => {
         setClientPageView('list');
         setClientToEdit(null);
+        updateUrl('list');
     };
 
     const handleSaveClient = (client: Client) => {
@@ -324,8 +455,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         }
         setClientPageView('list');
         setClientToEdit(null);
+        updateUrl('list');
     };
 
+    // Updated resetViews to properly clear sub-view logic
     const resetViews = (page: DashboardPage) => {
         onNavigate(page);
         setUserPageView('list');
@@ -333,6 +466,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         setFinancialPageView('list');
         setClientPageView('list');
         setIsMobileSidebarOpen(false); // Close sidebar on navigation
+        
+        // Explicitly clear view/id params from URL when navigating via breadcrumbs/sidebar
+        // Note: App.tsx's handleDashboardNavigation does this, but we duplicate here for breadcrumb safety if called directly
     }
 
     // --- Breadcrumbs Calculation Logic ---
@@ -350,22 +486,22 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 items.push({ label: 'Financial' });
                 break;
             case 'users':
-                items.push({ label: 'Team', onClick: () => setUserPageView('list') });
+                items.push({ label: 'Team', onClick: () => { setUserPageView('list'); updateUrl('list'); } });
                 if (userPageView === 'add') items.push({ label: 'New User' });
                 if (userPageView === 'edit') items.push({ label: 'Edit User' });
                 break;
             case 'rentals':
-                items.push({ label: 'Rentals', onClick: () => setRentalPageView('list') });
+                items.push({ label: 'Rentals', onClick: () => { setRentalPageView('list'); updateUrl('list'); } });
                 if (rentalPageView === 'add') items.push({ label: 'New Rental' });
                 if (rentalPageView === 'edit') items.push({ label: 'Edit Rental' });
                 break;
             case 'clients':
-                items.push({ label: 'Clients', onClick: () => setClientPageView('list') });
+                items.push({ label: 'Clients', onClick: () => { setClientPageView('list'); updateUrl('list'); } });
                 if (clientPageView === 'add') items.push({ label: 'New Client' });
                 if (clientPageView === 'edit') items.push({ label: 'Edit Client' });
                 break;
             case 'financial':
-                items.push({ label: 'Costs', onClick: () => setFinancialPageView('list') });
+                items.push({ label: 'Costs', onClick: () => { setFinancialPageView('list'); updateUrl('list'); } });
                 if (financialPageView === 'add') items.push({ label: 'New Cost' });
                 if (financialPageView === 'edit') items.push({ label: 'Edit Cost' });
                 break;

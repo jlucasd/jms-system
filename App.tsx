@@ -254,6 +254,25 @@ const App: React.FC = () => {
     fetchInitialUsers();
   }, []);
 
+  // --- URL Routing Logic ---
+  useEffect(() => {
+    const handlePopState = () => {
+        const params = new URLSearchParams(window.location.search);
+        const page = params.get('page') as DashboardPage | null;
+        if (page && isAuthenticated) {
+            setDashboardPage(page);
+        }
+    };
+
+    // Check URL on initial load if authenticated
+    if (isAuthenticated) {
+        handlePopState();
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (isAuthenticated) fetchAllData();
   }, [isAuthenticated]);
@@ -274,10 +293,20 @@ const App: React.FC = () => {
     setIsAuthenticated(true);
     setCurrentUser(fullUser);
     setSuccessMessage(`Bem-vindo(a), ${fullUser.fullName || 'Tripulante'}!`);
-    if (fullUser.role?.includes('Gerente') || fullUser.role?.includes('Financeiro')) {
-        setDashboardPage('dashboard');
+    
+    // Check URL first, if not present, set default
+    const params = new URLSearchParams(window.location.search);
+    const pageFromUrl = params.get('page') as DashboardPage | null;
+
+    if (pageFromUrl) {
+        setDashboardPage(pageFromUrl);
     } else {
-        setDashboardPage('rentals');
+        const defaultPage = (fullUser.role?.includes('Gerente') || fullUser.role?.includes('Financeiro')) ? 'dashboard' : 'rentals';
+        setDashboardPage(defaultPage);
+        // Set initial URL
+        const url = new URL(window.location.href);
+        url.searchParams.set('page', defaultPage);
+        window.history.replaceState({}, '', url.toString());
     }
   }
 
@@ -287,9 +316,18 @@ const App: React.FC = () => {
     setCurrentPage('login');
     setDashboardPage('dashboard');
     setSuccessMessage(null);
+    window.history.pushState({}, '', window.location.pathname); // Clear params on logout
   };
 
-  const handleDashboardNavigation = (page: DashboardPage) => setDashboardPage(page);
+  const handleDashboardNavigation = (page: DashboardPage) => {
+      setDashboardPage(page);
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', page);
+      // Clean up sub-view params when switching main tabs
+      url.searchParams.delete('view');
+      url.searchParams.delete('id');
+      window.history.pushState({}, '', url.toString());
+  };
 
   const handleGenerateRentalsBackup = () => {
       if (rentals.length === 0) return;

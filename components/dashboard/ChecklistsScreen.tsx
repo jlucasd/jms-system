@@ -17,6 +17,7 @@ interface ContractItems {
     trailerDoc: boolean;
     anchor: boolean;
     rope: boolean;
+    engineOil: boolean; // Novo item obrigatório
     vests: {
         eg: boolean;
         gg: boolean;
@@ -57,6 +58,7 @@ const initialContractItems: ContractItems = {
     trailerDoc: false,
     anchor: false,
     rope: false,
+    engineOil: false,
     vests: { eg: false, gg: false, g1: false, m: false },
     wash: false,
     freshwaterFlush: false,
@@ -75,6 +77,7 @@ const itemLabels: Record<string, string> = {
     trailerDoc: 'Doc. Carreta Rodoviária',
     anchor: 'Âncora',
     rope: 'Cabo de Atracação',
+    engineOil: 'Nível de Óleo do Motor',
     wash: 'Lavar Jet Ski',
     freshwaterFlush: 'Adoçar Motor',
     checkinVideo: 'Vídeo de Check-in',
@@ -229,9 +232,11 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [], clients
     const calculateStatus = (items: ContractItems, context: 'checkin' | 'checkout'): ChecklistStatus => {
         if (!items || !items.vests) return 'Não Iniciado';
 
+        // 'anchor' e 'rope' removidos da lista de obrigatórios
+        // 'engineOil' adicionado como obrigatório
         const mainKeys = context === 'checkin'
-            ? ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'anchor', 'rope', 'checkinVideo', 'cha', 'signedContract']
-            : ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'anchor', 'rope', 'wash', 'freshwaterFlush', 'checkoutVideo', 'signedContract'];
+            ? ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'engineOil', 'checkinVideo', 'cha', 'signedContract']
+            : ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'engineOil', 'wash', 'freshwaterFlush', 'checkoutVideo', 'signedContract'];
         
         // Contagem de itens principais marcados
         let mainCheckedCount = 0;
@@ -465,7 +470,9 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [], clients
             const currentCheckoutPendencies: string[] = [];
             
             // --- VALIDAÇÃO CHECK-IN ---
-            const checkinKeys = ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'anchor', 'rope', 'checkinVideo', 'cha', 'signedContract'];
+            // 'anchor' e 'rope' removidos da validação
+            // 'engineOil' adicionado na validação
+            const checkinKeys = ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'engineOil', 'checkinVideo', 'cha', 'signedContract'];
             checkinKeys.forEach(key => {
                 const k = key as keyof ContractItems;
                 // Verifica se item é falso ou undefined
@@ -484,7 +491,7 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [], clients
             }
 
             // --- VALIDAÇÃO CHECK-OUT ---
-            const checkoutKeys = ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'anchor', 'rope', 'wash', 'freshwaterFlush', 'checkoutVideo', 'signedContract'];
+            const checkoutKeys = ['tiem', 'fuelFull', 'key', 'insurance', 'trailerDoc', 'engineOil', 'wash', 'freshwaterFlush', 'checkoutVideo', 'signedContract'];
             checkoutKeys.forEach(key => {
                 const k = key as keyof ContractItems;
                 if (!formData.checkoutItems || formData.checkoutItems[k] !== true) {
@@ -610,6 +617,15 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [], clients
                 <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                     <input 
                         type="checkbox" 
+                        checked={formData[stage].engineOil} 
+                        onChange={e => updateItem(stage, 'engineOil', e.target.checked)}
+                        className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Nível de Óleo do Motor</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                    <input 
+                        type="checkbox" 
                         checked={formData[stage].key} 
                         onChange={e => updateItem(stage, 'key', e.target.checked)}
                         className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
@@ -641,7 +657,10 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [], clients
                         onChange={e => updateItem(stage, 'anchor', e.target.checked)}
                         className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
                     />
-                    <span className="text-sm font-medium text-gray-700">Âncora</span>
+                    <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-700">Âncora</span>
+                        <span className="text-[10px] text-gray-400 font-bold">(Opcional)</span>
+                    </div>
                 </label>
                 <label className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                     <input 
@@ -650,7 +669,10 @@ const ChecklistsScreen: React.FC<ChecklistsScreenProps> = ({ fleet = [], clients
                         onChange={e => updateItem(stage, 'rope', e.target.checked)}
                         className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
                     />
-                    <span className="text-sm font-medium text-gray-700">Cabo de Atracação</span>
+                    <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-700">Cabo de Atracação</span>
+                        <span className="text-[10px] text-gray-400 font-bold">(Opcional)</span>
+                    </div>
                 </label>
 
                 {/* Itens extras apenas para Checkout */}

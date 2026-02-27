@@ -60,6 +60,23 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
         return ['Todos', ...Array.from(years).sort((a, b) => parseInt(b) - parseInt(a))];
     }, [costs]);
 
+    const { recentPendingCosts, recentPendingTotal } = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const fifteenDaysFromNow = new Date(today);
+        fifteenDaysFromNow.setDate(today.getDate() + 15);
+
+        const pending = costs.filter(cost => {
+            if (cost.isPaid || !cost.date) return false;
+            const costDate = new Date(cost.date + 'T00:00:00');
+            return costDate <= fifteenDaysFromNow;
+        });
+
+        const total = pending.reduce((acc, cost) => acc + (cost.value - cost.paidValue), 0);
+
+        return { recentPendingCosts: pending, recentPendingTotal: total };
+    }, [costs]);
+
     const handleSort = (key: keyof Cost) => {
         let direction: 'asc' | 'desc' = 'asc';
         if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -122,6 +139,11 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
 
     // 3. Filtered Costs (Baseado no baseCosts + Filtro de Status + Ordenação) - Usado para a Tabela
     const filteredCosts = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const fifteenDaysFromNow = new Date(today);
+        fifteenDaysFromNow.setDate(today.getDate() + 15);
+
         let result = baseCosts.filter(cost => {
             // Filtro de Status
             let statusMatch = true;
@@ -129,6 +151,10 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                 statusMatch = cost.isPaid;
             } else if (selectedStatus === 'Pendente') {
                 statusMatch = !cost.isPaid;
+            } else if (selectedStatus === 'Pendentes Recentes') {
+                if (cost.isPaid || !cost.date) return false;
+                const costDate = new Date(cost.date + 'T00:00:00');
+                statusMatch = costDate <= fifteenDaysFromNow;
             }
             return statusMatch;
         });
@@ -279,6 +305,34 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                             </div>
                         </div>
                     )}
+
+                    {canViewSummary && recentPendingCosts.length > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <div className="bg-amber-100 p-3 rounded-full text-amber-600 shrink-0">
+                                    <span className="material-symbols-outlined text-2xl">notification_important</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-amber-900 font-bold text-lg">Atenção: Custos Pendentes Recentes</h3>
+                                    <p className="text-amber-700 text-sm mt-0.5">
+                                        Você tem <span className="font-bold">{recentPendingCosts.length}</span> custo(s) atrasado(s) ou vencendo nos próximos 15 dias, totalizando <span className="font-bold">{formatCurrency(recentPendingTotal)}</span>.
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setSelectedStatus('Pendentes Recentes');
+                                    setSelectedYear('Todos');
+                                    setSelectedMonth('Todos');
+                                    setSearchTerm('');
+                                }}
+                                className="w-full sm:w-auto px-5 py-2.5 bg-amber-600 text-white text-sm font-bold rounded-lg shadow-sm hover:bg-amber-700 transition-colors whitespace-nowrap flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-sm">visibility</span>
+                                Ver Custos
+                            </button>
+                        </div>
+                    )}
                     
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                         <div className="p-5 border-b border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-4">
@@ -304,6 +358,7 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                                     <option>Status: Todos</option>
                                     <option>Pago</option>
                                     <option>Pendente</option>
+                                    <option>Pendentes Recentes</option>
                                 </select>
                             </div>
                             <button onClick={onNavigateToAddCost} className="w-full lg:w-auto px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-2">

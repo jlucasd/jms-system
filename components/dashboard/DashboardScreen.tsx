@@ -81,6 +81,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const [rentalToEdit, setRentalToEdit] = useState<Rental | null>(null);
     const [financialPageView, setFinancialPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [costToEdit, setCostToEdit] = useState<Cost | null>(null);
+    const [costToDuplicate, setCostToDuplicate] = useState<Cost | null>(null);
     const [clientPageView, setClientPageView] = useState<'list' | 'add' | 'edit'>('list');
     const [clientToEdit, setClientToEdit] = useState<Client | null>(null);
 
@@ -183,10 +184,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 if (view === 'add') {
                     setFinancialPageView('add');
                     setCostToEdit(null);
+                    // We don't clear costToDuplicate here because it might be set right before URL update
                 } else if (view === 'edit' && id && costs.length > 0) {
                     const cost = costs.find(c => c.id === Number(id));
                     if (cost) {
                         setCostToEdit(cost);
+                        setCostToDuplicate(null);
                         setFinancialPageView('edit');
                     } else {
                         setFinancialPageView('list');
@@ -194,6 +197,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                 } else {
                     setFinancialPageView('list');
                     setCostToEdit(null);
+                    setCostToDuplicate(null);
                 }
             }
         };
@@ -386,12 +390,21 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     // --- Financial Handlers ---
     const handleNavigateToAddCost = () => {
         setCostToEdit(null);
+        setCostToDuplicate(null);
         setFinancialPageView('add');
         updateUrl('add');
     };
     
+    const handleNavigateToDuplicateCost = (cost: Cost) => {
+        setCostToEdit(null);
+        setCostToDuplicate(cost);
+        setFinancialPageView('add');
+        updateUrl('add');
+    };
+
     const handleNavigateToEditCost = (cost: Cost) => {
         setCostToEdit(cost);
+        setCostToDuplicate(null);
         setFinancialPageView('edit');
         updateUrl('edit', cost.id);
     };
@@ -399,6 +412,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
     const handleCancelCostForm = () => {
         setFinancialPageView('list');
         setCostToEdit(null);
+        setCostToDuplicate(null);
         updateUrl('list');
     };
 
@@ -414,6 +428,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
         }
         setFinancialPageView('list');
         setCostToEdit(null);
+        setCostToDuplicate(null);
         updateUrl('list');
     };
 
@@ -630,13 +645,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({
                         costs={costs} 
                         onNavigateToAddCost={handleNavigateToAddCost}
                         onNavigateToEditCost={handleNavigateToEditCost}
+                        onNavigateToDuplicateCost={handleNavigateToDuplicateCost}
                         onDeleteCost={onDeleteCost}
                         successMessage={successMessage} 
                         setSuccessMessage={setSuccessMessage}
                         currentUser={currentUser}
                     />;
                 }
-                return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} />;
+                return <AddCostScreen onCancel={handleCancelCostForm} onSave={handleSaveCost} costToEdit={costToEdit} costToDuplicate={costToDuplicate} />;
             case 'checklists':
                 return <ChecklistsScreen fleet={fleet} clients={clients} />;
             case 'settings':

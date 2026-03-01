@@ -7,6 +7,7 @@ interface FinancialScreenProps {
     costs: Cost[];
     onNavigateToAddCost: () => void;
     onNavigateToEditCost: (cost: Cost) => void;
+    onNavigateToDuplicateCost: (cost: Cost) => void;
     onDeleteCost: (costId: number) => void;
     successMessage: string | null;
     setSuccessMessage: (message: string | null) => void;
@@ -15,7 +16,7 @@ interface FinancialScreenProps {
 
 const months = ['Todos', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAddCost, onNavigateToEditCost, onDeleteCost, successMessage, setSuccessMessage, currentUser }) => {
+const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAddCost, onNavigateToEditCost, onNavigateToDuplicateCost, onDeleteCost, successMessage, setSuccessMessage, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedMonth, setSelectedMonth] = useState('Todos');
     const [selectedStatus, setSelectedStatus] = useState('Status: Todos');
@@ -415,6 +416,9 @@ const FinancialScreen: React.FC<FinancialScreenProps> = ({ costs, onNavigateToAd
                                             <td className="p-4 text-right">
                                                 {canEdit && (
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <button onClick={() => onNavigateToDuplicateCost(cost)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Duplicar">
+                                                            <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                                                        </button>
                                                         <button onClick={() => onNavigateToEditCost(cost)} className="p-1.5 text-gray-400 hover:text-primary hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                                                             <span className="material-symbols-outlined text-[20px]">edit</span>
                                                         </button>

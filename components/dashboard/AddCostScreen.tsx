@@ -6,9 +6,10 @@ interface AddCostScreenProps {
     onCancel: () => void;
     onSave: (cost: Cost | Cost[]) => void;
     costToEdit: Cost | null;
+    costToDuplicate?: Cost | null;
 }
 
-const AddCostScreen: React.FC<AddCostScreenProps> = ({ onCancel, onSave, costToEdit }) => {
+const AddCostScreen: React.FC<AddCostScreenProps> = ({ onCancel, onSave, costToEdit, costToDuplicate }) => {
     const isEditMode = !!costToEdit;
     
     const [type, setType] = useState('');
@@ -35,11 +36,20 @@ const AddCostScreen: React.FC<AddCostScreenProps> = ({ onCancel, onSave, costToE
             setIsPaid(costToEdit.isPaid);
             setObservations(costToEdit.observations || '');
             setIsInstallment(false); // Edição de parcelas individuais não suporta transformar em parcelado aqui
+        } else if (costToDuplicate) {
+            setType(costToDuplicate.type);
+            setValue(String(costToDuplicate.value));
+            setPaidValue(String(costToDuplicate.paidValue));
+            setInvestor(costToDuplicate.investor);
+            setDate(costToDuplicate.date);
+            setIsPaid(costToDuplicate.isPaid);
+            setObservations(costToDuplicate.observations || '');
+            setIsInstallment(false);
         } else {
             const today = new Date().toISOString().split('T')[0];
             setDate(today);
         }
-    }, [costToEdit]);
+    }, [costToEdit, costToDuplicate]);
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();

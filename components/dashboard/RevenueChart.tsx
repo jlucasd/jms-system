@@ -68,7 +68,7 @@ const RevenueChart: React.FC<{ year: string; location: string; rentals: Rental[]
             </div>
             <div className="flex-1 flex gap-4 h-64 w-full">
                 <div className="flex flex-col justify-between h-full text-xs text-gray-400 font-medium pb-6 w-16 text-right">
-                    {yAxisLabels.map(label => <span key={label}>{label}</span>)}
+                    {yAxisLabels.map((label, index) => <span key={index}>{label}</span>)}
                 </div>
                 <div className="flex-1 flex flex-col border-l border-b border-gray-100">
                     <div className="flex-1 flex items-end w-full gap-2 md:gap-3 px-2">

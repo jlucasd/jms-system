@@ -271,7 +271,7 @@ const FinancialDashboardScreen: React.FC<FinancialDashboardScreenProps> = ({ cos
                     <h3 className="text-lg font-bold text-primary mb-4">Custos Mensais ({selectedPeriodText})</h3>
                     <div className="flex gap-4 h-64">
                         <div className="flex flex-col justify-between text-xs text-gray-400 font-medium text-right pb-6 w-16">
-                            {monthlyCostsData.yAxisLabels.map(label => <span key={label}>{label}</span>)}
+                            {monthlyCostsData.yAxisLabels.map((label, index) => <span key={index}>{label}</span>)}
                         </div>
                         <div className="flex-1 flex flex-col border-l border-b border-gray-100">
                             <div className="flex-1 flex items-end w-full gap-2 md:gap-3 px-2">

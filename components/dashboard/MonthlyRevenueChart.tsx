@@ -58,7 +58,7 @@ const MonthlyRevenueChart: React.FC<{ year: string; month: string; location: str
             </div>
             <div className="flex-1 flex gap-4 h-80 w-full">
                 <div className="flex flex-col justify-between h-full text-xs text-gray-400 font-medium pb-6 w-14 text-right flex-shrink-0">
-                     {yAxisLabels.map(label => <span key={label}>{label}</span>)}
+                     {yAxisLabels.map((label, index) => <span key={index}>{label}</span>)}
                 </div>
                 <div className="flex-1 flex flex-col border-l border-gray-100 overflow-hidden">
                     <div className="flex-1 overflow-x-auto custom-scrollbar">
